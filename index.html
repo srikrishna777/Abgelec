@@ -990,7 +990,7 @@
       grid-template-columns: 1.15fr 0.85fr;
     }
     .dossier-card:nth-child(even) { grid-template-columns: 0.85fr 1.15fr; }
-    .dossier-content { padding: 3rem; display: flex; flex-direction: column; justify-content: center; }
+    .dossier-content { padding: 3rem; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
     .dossier-code { font-family: var(--font-mono); font-size: 0.78rem; color: var(--hazard-amber); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.6rem; font-weight: 700; }
     .dossier-title { font-family: var(--font-display); font-size: 2rem; line-height: 1.25; color: var(--green-forest); margin-bottom: 1.25rem; }
     .dossier-narrative { font-size: 1rem; color: #334155; line-height: 1.7; margin-bottom: 1.75rem; }
@@ -1422,6 +1422,18 @@
       transform: translateY(1px) rotate(-135deg);
     }
 
+    /* The three stat cells need about 315px between them, and with 3rem of
+       padding on each side that made the dossier content 411px wide inside a
+       356px card, so its text ran out past the right edge. */
+    @media (max-width: 640px) {
+      .dossier-stats-strip { grid-template-columns: 1fr; gap: 1.1rem; }
+    }
+    @media (max-width: 768px) {
+      .dossier-content { padding: 1.75rem 1.5rem; }
+      .dossier-title { font-size: 1.6rem; }
+      .dossier-visual { padding: 1.5rem; }
+    }
+
     /* These rows were written as inline grid styles, which no media query can
        override, so they stayed two and three columns wide on a phone and ran
        their contents off the side of the screen. */
@@ -1689,9 +1701,14 @@
     @media (max-width: 860px) {
       .twin-command-bar {
         position: static;
-        padding: 0 0 1rem;
+        /* The chip and the six preset buttons sat flush against each other and
+           the panel edge; this gives the control block real margins. */
+        padding: 1.1rem 1rem 1.25rem;
+        gap: 1.1rem;
         pointer-events: auto;
       }
+      .twin-actions { gap: 0.65rem; }
+      .cam-btn { padding: 0.55rem 0.95rem; }
       /* The wrapper must grow to fit the in-flow drawer, so height goes on the
          canvas itself; leaving it on the wrapper spills the drawer into the
          next section. */
