@@ -51,7 +51,19 @@
 
     * { margin: 0; padding: 0; box-sizing: border-box; scroll-behavior: smooth; }
 
-    html { overflow-x: clip; }
+    html {
+      overflow-x: clip;
+      /* Chrome on Android enlarges text in blocks it judges wide ("font
+         boosting"). It fires per element, so headings and labels grow by
+         different amounts and run into each other — on the phone only, never
+         on desktop and never in an emulator. This holds every size as written. */
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    /* Long unbroken tokens (equipment codes, URLs) must not force a box wider
+       than the phone and shove its neighbour. */
+    body { overflow-wrap: break-word; }
     
     body {
       background-color: var(--wheat-base);
@@ -280,12 +292,18 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
+      /* min-width:0 below lets this box shrink, but nowrap text does not shrink
+         with it. Without this the brand overflowed its box and printed under
+         the RFQ button on phones. */
+      overflow: hidden;
       /* Flex items default to min-width:auto, which would hold the lockup at the
          tagline's full width and push the navbar wider than small screens. */
       min-width: 0;
     }
     .brand-title {
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .brand-tag {
       font-family: var(--font-mono);
@@ -327,7 +345,10 @@
       transition: var(--transition);
     }
     .nav-item-link:hover::after, .nav-item-link.active::after { width: 100%; }
-    .nav-right-actions { display: flex; align-items: center; gap: 1rem; }
+    .nav-right-actions { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+    /* This sizing lived in an inline style, which outranks every media query, so
+       on a phone the button kept its desktop width and squeezed the brand. */
+    .nav-rfq-btn { padding: 0.65rem 1.35rem; font-size: 0.85rem; }
     .mobile-nav-toggle {
       display: none;
       background: var(--wheat-parchment);
@@ -373,6 +394,7 @@
       padding: 6.5rem 0 5.5rem;
       overflow: hidden;
       min-height: 88vh;
+      min-height: 88dvh;
       display: flex;
       align-items: center;
     }
@@ -888,6 +910,7 @@
       position: absolute;
       top: 1rem;
       right: 1rem;
+      max-width: calc(50% - 1.25rem);
       background: rgba(10, 61, 36, 0.88);
       color: #ffffff;
       font-family: var(--font-mono);
@@ -906,6 +929,7 @@
       position: absolute;
       top: 1rem;
       left: 1rem;
+      max-width: calc(50% - 1.25rem);
       background: rgba(251, 249, 245, 0.95);
       border: 1px solid var(--green-emerald);
       color: var(--green-forest);
@@ -1298,6 +1322,10 @@
       text-align: left;
       cursor: pointer;
       transition: var(--transition);
+      /* Without this the nowrap label below reports the longest option string as
+         the trigger's minimum width, which propagated all the way up and made
+         the estimator panel wider than a phone screen. */
+      min-width: 0;
     }
     .select-trigger:hover { border-color: var(--green-emerald); }
     .select-trigger:focus-visible,
@@ -1311,6 +1339,15 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      /* A flex item will not shrink past its content unless told to, so the
+         ellipsis never engaged and the longest option string became the minimum
+         width of the whole estimator panel, pushing it wider than a phone.
+         min-width alone is not enough here: the grid track above still sized to
+         the content until the width was made definite, so width:0 with flex-grow
+         is what actually lets it truncate. */
+      min-width: 0;
+      width: 0;
+      flex: 1 1 0;
     }
     .select-caret {
       flex-shrink: 0;
@@ -1383,6 +1420,15 @@
     }
     #gallery-toggle[aria-expanded="true"] .gallery-toggle-caret {
       transform: translateY(1px) rotate(-135deg);
+    }
+
+    /* These rows were written as inline grid styles, which no media query can
+       override, so they stayed two and three columns wide on a phone and ran
+       their contents off the side of the screen. */
+    .auto-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .auto-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+    @media (max-width: 640px) {
+      .auto-grid-2, .auto-grid-3 { grid-template-columns: 1fr; }
     }
 
     .form-status {
@@ -1499,6 +1545,7 @@
       max-width: 780px;
       width: 100%;
       max-height: 90vh;
+      max-height: 90dvh;
       overflow-y: auto;
       padding: 2.5rem;
       position: relative;
@@ -1550,6 +1597,7 @@
     .lightbox-image-wrap {
       width: 100%;
       max-height: 75vh;
+      max-height: 70dvh;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1561,6 +1609,7 @@
     .lightbox-image-wrap img {
       max-width: 100%;
       max-height: 75vh;
+      max-height: 70dvh;
       object-fit: contain;
     }
     .lightbox-meta-bar {
@@ -1656,6 +1705,21 @@
       }
     }
 
+    /* On a phone the RFQ button alone took nearly half the bar, leaving the
+       brand too little room to render at full size. */
+    @media (max-width: 600px) {
+      .brand-title { font-size: 1.05rem; }
+      .brand-tag { font-size: 0.58rem; letter-spacing: 0.06em; }
+      .nav-right-actions { gap: 0.6rem; }
+      .nav-rfq-btn { padding: 0.7rem 0.85rem; font-size: 0.78rem; }
+      .brand-glyph { width: 38px; height: 38px; font-size: 1.1rem; }
+    }
+
+    /* Narrowest phones: the button keeps its meaning as just "RFQ". */
+    @media (max-width: 400px) {
+      .nav-rfq-btn .rfq-word-initiate { display: none; }
+    }
+
     @media (max-width: 768px) {
       .nav-links-cluster { display: none; }
       .mobile-nav-toggle { display: flex; }
@@ -1711,8 +1775,8 @@
       </ul>
 
       <div class="nav-right-actions">
-        <a href="#terminal" class="btn btn-emerald" style="padding: 0.65rem 1.35rem; font-size:0.85rem;">
-          <i class="fa-solid fa-terminal"></i> INITIATE RFQ
+        <a href="#terminal" class="btn btn-emerald nav-rfq-btn">
+          <i class="fa-solid fa-terminal"></i> <span class="rfq-word-initiate">INITIATE </span>RFQ
         </a>
         <button class="mobile-nav-toggle" id="mobile-toggle-btn" aria-label="Toggle Mobile Navigation">
           <i class="fa-solid fa-bars"></i>
@@ -1830,7 +1894,7 @@
             </svg>
           </div>
 
-          <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0.75rem; margin-top:1rem;">
+          <div class="auto-grid-2" style="gap:0.75rem; margin-top:1rem;">
             <div style="background:var(--wheat-parchment); border:1px solid var(--wheat-border); padding:0.6rem 0.85rem; border-radius:8px;">
               <span style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-subtle); text-transform:uppercase;">Flagship Site</span>
               <p style="font-family:var(--font-display); font-size:1.05rem; font-weight:700; color:var(--green-forest); margin-top:0.15rem;">230kV Mulanur (₹24 Cr)</p>
@@ -2217,7 +2281,7 @@
               With an established annual turnover of <strong>₹15 to ₹25 Crore+</strong> and single-contract execution capacity up to <strong>₹24 Crore</strong>, ABG Elec Consultants possesses the banking strength, procurement leverage, and technical resources to take on critical path turnkey infrastructure.
             </p>
 
-            <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:1rem;">
+            <div class="auto-grid-2">
               <div style="background:var(--wheat-parchment); border:1px solid var(--wheat-border); padding:1rem; border-radius:8px;">
                 <span style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-subtle); font-weight:700;">ANNUAL TURNOVER</span>
                 <p style="font-family:var(--font-display); font-size:1.3rem; font-weight:700; color:var(--hazard-amber); margin-top:0.2rem;">₹15 - ₹25 Crore</p>
@@ -2473,7 +2537,7 @@
                 </select>
               </div>
 
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem;">
+              <div class="auto-grid-2" style="gap:1.25rem;">
                 <div class="control-field">
                   <label class="control-label">02 // Voltage Level</label>
                   <select class="control-select" id="t-voltage" onchange="updateTerminalEstimates()">
@@ -2552,7 +2616,7 @@
             </div>
           </div>
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+          <div class="auto-grid-2">
             <div class="hub-box">
               <div class="hub-state">KARNATAKA HUB</div>
               <div class="hub-city">Hubli Office</div>
@@ -2587,7 +2651,7 @@
           </p>
 
           <form id="rfq-console-form" onsubmit="event.preventDefault(); submitRfqProposal();">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="auto-grid-2">
               <div class="control-field">
                 <label class="control-label">Your Name *</label>
                 <input type="text" class="control-input" id="rfq-name" name="name" required placeholder="Er. / Mr. / Ms. Name" />
@@ -2598,7 +2662,7 @@
               </div>
             </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="auto-grid-2">
               <div class="control-field">
                 <label class="control-label">Corporate Email *</label>
                 <input type="email" class="control-input" id="rfq-email" name="email" required placeholder="name@company.com" />
@@ -3726,7 +3790,7 @@
         gallerySnippet = `
           <div style="margin-top:1.5rem; border-top:1px solid var(--wheat-border); padding-top:1.25rem;">
             <span style="color:var(--green-emerald); font-family:var(--font-mono); font-size:0.78rem; font-weight:700;">ON-SITE FIELD PHOTOGRAPHY (${p.photosList.length} PHOTOS)</span>
-            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:0.75rem; margin-top:0.75rem;">
+            <div class="auto-grid-3" style="margin-top:0.75rem;">
               ${p.photosList.map(fn => `
                 <div style="height:110px; border-radius:8px; overflow:hidden; cursor:pointer; border:1px solid var(--wheat-border);" onclick="openLightboxByPhoto('${fn}')">
                   <img src="${getImageSrc(fn)}" alt="Photo" style="width:100%; height:100%; object-fit:cover;" />
@@ -3745,7 +3809,7 @@
         </div>
 
         <div style="background:var(--wheat-parchment); border:1px solid var(--wheat-border); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; font-size:0.9rem;">
-          <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:1rem; margin-bottom:1rem;">
+          <div class="auto-grid-2" style="margin-bottom:1rem;">
             <div><span style="color:var(--text-subtle); font-family:var(--font-mono); font-size:0.75rem; font-weight:700;">LOCATION</span> <br /><strong style="color:var(--green-forest);">${p.location}</strong></div>
             <div><span style="color:var(--text-subtle); font-family:var(--font-mono); font-size:0.75rem; font-weight:700;">CAPACITY</span> <br /><strong style="color:var(--green-emerald);">${p.capacity}</strong></div>
             <div><span style="color:var(--text-subtle); font-family:var(--font-mono); font-size:0.75rem; font-weight:700;">VALUATION</span> <br /><strong style="color:var(--hazard-amber);">${p.value}</strong></div>
