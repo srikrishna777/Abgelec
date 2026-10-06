@@ -1359,6 +1359,28 @@
       background: var(--green-wash);
       color: var(--green-forest);
     }
+    .form-status {
+      display: none;
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+    .form-status.show { display: block; }
+    .form-status.ok {
+      background: var(--green-wash);
+      border: 1px solid var(--green-emerald);
+      color: var(--green-forest);
+    }
+    .form-status.err {
+      background: var(--hazard-amber-bg);
+      border: 1px solid var(--hazard-amber);
+      color: #8a4b06;
+    }
+    .form-status a { color: inherit; font-weight: 700; text-decoration: underline; }
+    .btn[disabled] { opacity: 0.65; cursor: not-allowed; }
+
     .terminal-output-panel {
       background: linear-gradient(135deg, #102e1d, #06190f);
       border: 1px solid var(--green-mint);
@@ -2523,28 +2545,28 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
               <div class="control-field">
                 <label class="control-label">Your Name *</label>
-                <input type="text" class="control-input" id="rfq-name" required placeholder="Er. / Mr. / Ms. Name" />
+                <input type="text" class="control-input" id="rfq-name" name="name" required placeholder="Er. / Mr. / Ms. Name" />
               </div>
               <div class="control-field">
                 <label class="control-label">Organization *</label>
-                <input type="text" class="control-input" id="rfq-org" required placeholder="Developer / Utility / EPC" />
+                <input type="text" class="control-input" id="rfq-org" name="organization" required placeholder="Developer / Utility / EPC" />
               </div>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
               <div class="control-field">
                 <label class="control-label">Corporate Email *</label>
-                <input type="email" class="control-input" id="rfq-email" required placeholder="name@company.com" />
+                <input type="email" class="control-input" id="rfq-email" name="email" required placeholder="name@company.com" />
               </div>
               <div class="control-field">
                 <label class="control-label">Phone Number *</label>
-                <input type="tel" class="control-input" id="rfq-phone" required placeholder="+91 XXXXX XXXXX" />
+                <input type="tel" class="control-input" id="rfq-phone" name="phone" required placeholder="+91 XXXXX XXXXX" />
               </div>
             </div>
 
             <div class="control-field">
               <label class="control-label">Service Domain</label>
-              <select class="control-select" id="rfq-service">
+              <select class="control-select" id="rfq-service" name="service_domain">
                 <option value="Turnkey 230kV / 220kV EHV Substation EPC">Turnkey 230kV / 220kV EHV Substation EPC</option>
                 <option value="Wind / Solar Pooling Substation (PSS)">Wind / Solar Pooling Substation (PSS)</option>
                 <option value="EHV Bay Extension / Switching Station (TNEB/KPTCL/APTRANSCO)">EHV Bay Extension / Switching Station (TNEB/KPTCL/APTRANSCO)</option>
@@ -2556,12 +2578,18 @@
 
             <div class="control-field">
               <label class="control-label">Project Scope & Voltage Details *</label>
-              <textarea class="control-textarea" rows="4" id="rfq-details" required placeholder="Outline target location, voltage level, MVA rating, scope, and anticipated timeline..."></textarea>
+              <textarea class="control-textarea" rows="4" id="rfq-details" name="project_details" required placeholder="Outline target location, voltage level, MVA rating, scope, and anticipated timeline..."></textarea>
             </div>
 
-            <button type="submit" class="btn btn-emerald" style="width:100%; padding:1rem;">
+            <!-- Honeypot: hidden from people, bots fill every field they find. -->
+            <input type="checkbox" id="rfq-botcheck" name="botcheck" tabindex="-1" autocomplete="off"
+                   aria-hidden="true" style="display:none !important;" />
+
+            <button type="submit" class="btn btn-emerald" id="rfq-submit-btn" style="width:100%; padding:1rem;">
               <i class="fa-solid fa-paper-plane"></i> TRANSMIT PROJECT DOSSIER
             </button>
+
+            <div id="rfq-status" class="form-status" role="status" aria-live="polite"></div>
           </form>
         </div>
       </div>
@@ -3896,11 +3924,82 @@
       if (!e.target.closest('.select-shell')) closeAllSelects(null);
     });
 
-    function submitRfqProposal() {
-      const name = document.getElementById('rfq-name').value;
-      const org = document.getElementById('rfq-org').value;
-      alert(`Transmission confirmed: Proposal inquiry for ${org} (${name}) has been dispatched to ABG senior engineering leadership. Technical response will follow within 24 hours.`);
-      document.getElementById('rfq-console-form').reset();
+    /* Paste the Web3Forms access key between the quotes to turn on the RFQ
+       form. Get one free at https://web3forms.com by entering the inbox the
+       enquiries should land in; the key arrives by email. It is meant to sit in
+       public client-side code — it only allows a submission to be delivered to
+       that one address, and cannot be used to read anything.
+
+       While this is empty the form does NOT pretend to have sent anything: it
+       says so plainly and points the visitor at the email address and phone
+       number instead, so nobody is left waiting for a reply that never comes. */
+    const WEB3FORMS_ACCESS_KEY = '';
+
+    async function submitRfqProposal() {
+      const form = document.getElementById('rfq-console-form');
+      const btn = document.getElementById('rfq-submit-btn');
+      const statusEl = document.getElementById('rfq-status');
+      const read = id => (document.getElementById(id)?.value || '').trim();
+      const show = (kind, msg) => {
+        statusEl.className = 'form-status show ' + kind;
+        statusEl.innerHTML = msg;
+      };
+      const contactFallback =
+        'Please send it straight to <a href="mailto:abgelec@gmail.com">abgelec@gmail.com</a>' +
+        ' or call <a href="tel:+919361004116">+91 93610 04116</a>.';
+
+      // A person never sees the honeypot, so anything in it came from a bot.
+      if (document.getElementById('rfq-botcheck')?.checked) return;
+
+      if (!WEB3FORMS_ACCESS_KEY) {
+        show('err', 'This form is not connected to an inbox yet, so it cannot reach us. ' +
+          contactFallback);
+        return;
+      }
+
+      const enquiry = {
+        name: read('rfq-name'),
+        organization: read('rfq-org'),
+        email: read('rfq-email'),
+        phone: read('rfq-phone'),
+        service_domain: read('rfq-service'),
+        project_details: read('rfq-details')
+      };
+
+      const restore = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> TRANSMITTING...';
+      statusEl.className = 'form-status';
+
+      try {
+        const res = await fetch('https://api.web3forms.com/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            access_key: WEB3FORMS_ACCESS_KEY,
+            subject: `RFQ: ${enquiry.service_domain || 'Project enquiry'} - ${enquiry.organization}`,
+            from_name: 'ABG Elec Consultants Website',
+            replyto: enquiry.email,
+            ...enquiry
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) throw new Error(data.message || `Request failed (${res.status})`);
+
+        /* Only claim what actually happened: the enquiry reached the inbox, and
+           replyto is set to their address so the reply lands with them. No
+           confirmation copy is sent to the visitor, so none is promised. */
+        show('ok', `Thank you, ${enquiry.name || 'and welcome'}. Your enquiry has reached ABG Elec ` +
+          'Consultants and a senior estimator will respond within one working day, ' +
+          `to ${enquiry.email}.`);
+        form.reset();
+      } catch (err) {
+        show('err', 'Your enquiry could not be sent just now — the connection may have dropped. ' +
+          'Nothing you typed has been lost. ' + contactFallback);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = restore;
+      }
     }
 
     window.addEventListener('click', (e) => {
