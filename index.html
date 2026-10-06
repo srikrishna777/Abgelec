@@ -1359,6 +1359,24 @@
       background: var(--green-wash);
       color: var(--green-forest);
     }
+    .gallery-toggle-wrap {
+      display: flex;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+    .gallery-toggle-wrap .btn { gap: 0.6rem; }
+    .gallery-toggle-caret {
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: translateY(-2px) rotate(45deg);
+      transition: transform 0.2s ease;
+    }
+    #gallery-toggle[aria-expanded="true"] .gallery-toggle-caret {
+      transform: translateY(1px) rotate(-135deg);
+    }
+
     .form-status {
       display: none;
       margin-top: 1rem;
@@ -2269,6 +2287,13 @@
 
       <!-- Gallery Grid Container -->
       <div class="gallery-grid" id="field-gallery-container"></div>
+
+      <!-- Collapsed by default: 34 photos at once made the page very long. -->
+      <div class="gallery-toggle-wrap">
+        <button type="button" class="btn btn-wheat" id="gallery-toggle"
+                onclick="toggleGallery()" aria-expanded="false"
+                aria-controls="field-gallery-container"></button>
+      </div>
     </div>
   </section>
 
@@ -3046,6 +3071,13 @@
     // FIELD PHOTO GALLERY RENDERING & LIGHTBOX
     // ==========================================================================
     let currentGalleryCategory = 'all';
+
+    /* Showing all 34 photos at once made the page very long to scroll, so the
+       grid starts at two rows and expands on request. The lightbox still gets
+       the whole filtered list, so a visitor can page through every photo of a
+       site from the first thumbnail without expanding anything. */
+    const GALLERY_PREVIEW_COUNT = 8;
+    let galleryExpanded = false;
     let currentLightboxList = [];
     let currentLightboxIdx = 0;
 
@@ -3059,7 +3091,20 @@
 
       currentLightboxList = filtered;
 
-      container.innerHTML = filtered.map((item, idx) => {
+      const hidden = Math.max(filtered.length - GALLERY_PREVIEW_COUNT, 0);
+      const visible = galleryExpanded ? filtered : filtered.slice(0, GALLERY_PREVIEW_COUNT);
+
+      const toggle = document.getElementById('gallery-toggle');
+      if (toggle) {
+        /* Nothing to collapse when the filter already fits in the preview. */
+        toggle.parentElement.style.display = hidden ? 'flex' : 'none';
+        toggle.setAttribute('aria-expanded', galleryExpanded ? 'true' : 'false');
+        toggle.innerHTML = galleryExpanded
+          ? 'SHOW FEWER PHOTOS <span class="gallery-toggle-caret" aria-hidden="true"></span>'
+          : `SHOW ALL ${filtered.length} PHOTOS <span class="gallery-toggle-caret" aria-hidden="true"></span>`;
+      }
+
+      container.innerHTML = visible.map((item, idx) => {
         const src = getImageSrc(item.file);
         return `
           <div class="gallery-item-card" onclick="openLightbox(${idx})">
@@ -3084,7 +3129,18 @@
       document.querySelectorAll('.photo-filter-deck .filter-pill').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentGalleryCategory = cat;
+      galleryExpanded = false;
       renderPhotoGallery();
+    }
+
+    function toggleGallery() {
+      galleryExpanded = !galleryExpanded;
+      renderPhotoGallery();
+      /* Collapsing removes rows above the fold, which would otherwise leave the
+         visitor stranded further down the page than the gallery now reaches. */
+      if (!galleryExpanded) {
+        document.getElementById('gallery').scrollIntoView({ block: 'start' });
+      }
     }
 
     function openLightbox(idx) {
