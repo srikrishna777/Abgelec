@@ -242,6 +242,7 @@
       top: 0;
       z-index: 1000;
       background: rgba(251, 249, 245, 0.94);
+      -webkit-backdrop-filter: blur(16px);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--wheat-border);
       transition: var(--transition);
@@ -477,6 +478,7 @@
       left: 0.75rem;
       right: 0.75rem;
       background: rgba(10, 38, 24, 0.88);
+      -webkit-backdrop-filter: blur(8px);
       backdrop-filter: blur(8px);
       padding: 0.6rem 0.9rem;
       border-radius: 8px;
@@ -687,6 +689,7 @@
       border: 1px solid var(--green-mint);
       padding: 0.6rem 1.25rem;
       border-radius: 8px;
+      -webkit-backdrop-filter: blur(14px);
       backdrop-filter: blur(14px);
       font-family: var(--font-mono);
       font-size: 0.82rem;
@@ -715,6 +718,7 @@
       align-items: center;
       gap: 0.4rem;
       transition: var(--transition);
+      -webkit-backdrop-filter: blur(10px);
       backdrop-filter: blur(10px);
     }
     .cam-btn:hover, .cam-btn.active {
@@ -735,6 +739,7 @@
       border: 1px solid var(--green-mint);
       border-radius: 14px;
       padding: 1.5rem;
+      -webkit-backdrop-filter: blur(20px);
       backdrop-filter: blur(20px);
       box-shadow: 0 20px 40px rgba(0,0,0,0.5), var(--shadow-glow);
       z-index: 40;
@@ -890,6 +895,7 @@
       font-weight: 700;
       padding: 0.25rem 0.6rem;
       border-radius: 4px;
+      -webkit-backdrop-filter: blur(6px);
       backdrop-filter: blur(6px);
       border: 1px solid var(--green-mint);
       display: flex;
@@ -1004,6 +1010,7 @@
       font-size: 0.72rem;
       display: flex;
       justify-content: space-between;
+      -webkit-backdrop-filter: blur(4px);
       backdrop-filter: blur(4px);
     }
 
@@ -1083,6 +1090,7 @@
       font-weight: 700;
       padding: 0.2rem 0.55rem;
       border-radius: 4px;
+      -webkit-backdrop-filter: blur(4px);
       backdrop-filter: blur(4px);
     }
     .gi-info-body {
@@ -1476,6 +1484,7 @@
       position: fixed;
       inset: 0;
       background: rgba(10, 38, 24, 0.85);
+      -webkit-backdrop-filter: blur(12px);
       backdrop-filter: blur(12px);
       z-index: 3000;
       align-items: center;
@@ -1521,6 +1530,7 @@
       position: fixed;
       inset: 0;
       background: rgba(5, 20, 12, 0.94);
+      -webkit-backdrop-filter: blur(14px);
       backdrop-filter: blur(14px);
       z-index: 4000;
       align-items: center;
@@ -1612,6 +1622,16 @@
     @media (max-width: 1200px) {
       .nav-links-cluster { display: none; }
       .mobile-nav-toggle { display: flex; }
+    }
+
+    /* Controls sized for a mouse are fiddly under a fingertip: the drawer close
+       was 26px square and the row buttons under 32px tall. Enlarge them only
+       where the pointer is coarse, so the desktop layout is unchanged. */
+    @media (pointer: coarse) {
+      .drawer-close { width: 40px; height: 40px; font-size: 1.15rem; }
+      .mobile-nav-toggle { min-width: 40px; min-height: 40px; }
+      .btn-inspect, .cam-btn, .filter-pill, .terminal-tab-btn { min-height: 40px; }
+      .gi-footer-meta span { padding: 0.25rem 0; }
     }
 
     /* The twin command bar and telemetry drawer are both absolutely positioned
