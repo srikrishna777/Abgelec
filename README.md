@@ -31,14 +31,23 @@ python3 -m http.server 8000
 | Lines | Contents |
 | --- | --- |
 | 1–21 | `<head>` — metadata and external CDN dependencies |
-| 23–1458 | `<style>` — the "wheatish & greenish" design system |
-| 1460–2534 | `<body>` — page sections |
-| 2535–3781 | `<script>` — embedded image data and page behaviour |
+| 23–1504 | `<style>` — the "wheatish & greenish" design system |
+| 1506–2578 | `<body>` — page sections |
+| 2579–3655 | `<script>` — embedded image data and page behaviour |
 
 ### Sections
 
 `hero` · `heritage` · `dossiers` · `projects` · `corridors` · `digital-twin`
 · `gallery` · `clients` · `dispatch-section`
+
+### Project catalog
+
+The `projectsCatalog` array in `index.html` drives the project grid, its filter
+pills and the dossier modal. It lists the 10 commissioned projects that have
+their own field photographs; the card count and filter results are derived from
+it at runtime, so adding an entry needs no other change. An entry's
+`photosList` supplies its dossier gallery, so a new project needs its images
+added to `siteImages` (or dropped into `images/`) under the same filenames.
 
 ### External dependencies
 
@@ -50,9 +59,10 @@ Loaded from CDNs at runtime, so the page needs network access to render fully:
 
 ## A note on the images
 
-The 37 photographs are base64-encoded directly into the `siteImages` object in
-`index.html`, which is why the file is ~10 MB with a single 9.6 MB line. The
-lookup helper already falls back to real files:
+All 37 photographs are base64-encoded into `index.html`: 34 in the `siteImages`
+object and 3 more inline on `<img>` tags in the markup. That is why the file is
+~10 MB with a single 9.6 MB line. The lookup helper already falls back to real
+files:
 
 ```js
 function getImageSrc(filename) {
