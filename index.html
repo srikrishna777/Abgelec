@@ -50,6 +50,8 @@
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; scroll-behavior: smooth; }
+
+    html { overflow-x: clip; }
     
     body {
       background-color: var(--wheat-base);
@@ -231,6 +233,9 @@
     @keyframes pulse-ring { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.3); } }
     @keyframes ticker-slide { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
+    /* Offset anchor jumps so the sticky navbar never covers a section heading. */
+    section[id] { scroll-margin-top: 110px; }
+
     /* Sticky Navbar */
     .cyber-nav {
       position: sticky;
@@ -248,7 +253,7 @@
       justify-content: space-between;
       padding: 0.9rem 0;
     }
-    .brand-group { display: flex; align-items: center; gap: 0.9rem; }
+    .brand-group { display: flex; align-items: center; gap: 0.9rem; min-width: 0; }
     .brand-glyph {
       width: 44px;
       height: 44px;
@@ -270,6 +275,17 @@
       line-height: 1.1;
       letter-spacing: -0.01em;
     }
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      /* Flex items default to min-width:auto, which would hold the lockup at the
+         tagline's full width and push the navbar wider than small screens. */
+      min-width: 0;
+    }
+    .brand-title {
+      white-space: nowrap;
+    }
     .brand-tag {
       font-family: var(--font-mono);
       font-size: 0.68rem;
@@ -281,11 +297,12 @@
     .nav-links-cluster {
       display: flex;
       align-items: center;
-      gap: 1.6rem;
+      gap: 1.15rem;
       list-style: none;
     }
     .nav-item-link {
-      font-size: 0.88rem;
+      font-size: 0.84rem;
+      white-space: nowrap;
       font-weight: 600;
       color: #334155;
       position: relative;
@@ -1448,6 +1465,35 @@
       .clients-logo-deck { grid-template-columns: repeat(3, 1fr); }
       .footer-columns { grid-template-columns: repeat(2, 1fr); }
     }
+    /* The eight nav labels plus the brand and the RFQ button stop fitting well
+       before the old 768px breakpoint, so collapse to the drawer earlier. */
+    @media (max-width: 1200px) {
+      .nav-links-cluster { display: none; }
+      .mobile-nav-toggle { display: flex; }
+    }
+
+    /* The twin command bar and telemetry drawer are both absolutely positioned
+       over the canvas; once the buttons wrap they collide with the drawer, so
+       below this width lay all three out in normal flow instead. */
+    @media (max-width: 860px) {
+      .twin-command-bar {
+        position: static;
+        padding: 0 0 1rem;
+        pointer-events: auto;
+      }
+      /* The wrapper must grow to fit the in-flow drawer, so height goes on the
+         canvas itself; leaving it on the wrapper spills the drawer into the
+         next section. */
+      .canvas-twin-wrapper { height: auto; }
+      #digital-twin-canvas { height: 380px; }
+      .telemetry-drawer {
+        position: static;
+        width: 100%;
+        max-width: 100%;
+        margin-top: 1rem;
+      }
+    }
+
     @media (max-width: 768px) {
       .nav-links-cluster { display: none; }
       .mobile-nav-toggle { display: flex; }
