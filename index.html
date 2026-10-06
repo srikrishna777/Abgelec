@@ -3729,6 +3729,19 @@
       applyTwinView(view);
     }
 
+    /* The corona particles start switched on, but the button's markup did not
+       say so, so it rendered unhighlighted while the effect was running. The
+       first tap then read as "turn it on" when it actually turned it off, and
+       the second put the glow back — which looked like the toggle refusing to
+       clear. Driving both buttons from the state they report keeps them honest
+       whatever the defaults become. */
+    function syncTwinToggleButtons() {
+      const corona = document.getElementById('btn-toggle-corona');
+      if (corona) corona.classList.toggle('active', coronaArcEnabled);
+      const night = document.getElementById('btn-toggle-night');
+      if (night) night.classList.toggle('active', nightDeckEnabled);
+    }
+
     document.getElementById('btn-toggle-night')?.addEventListener('click', function() {
       nightDeckEnabled = !nightDeckEnabled;
       this.classList.toggle('active', nightDeckEnabled);
@@ -4223,6 +4236,7 @@
       renderCatalog();
       renderPhotoGallery();
       initDigitalTwin3D();
+      syncTwinToggleButtons();
       startHeroSlider();
       updateTerminalEstimates();
     });
