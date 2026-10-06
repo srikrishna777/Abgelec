@@ -3343,8 +3343,7 @@
       const canvas = document.getElementById('digital-twin-canvas');
       if (!canvas) return;
 
-      const width = canvas.parentElement.clientWidth;
-      const height = canvas.parentElement.clientHeight;
+      const { width, height } = twinCanvasSize();
 
       if (typeof THREE === 'undefined') {
         renderTwin2DFallback(canvas);
@@ -3360,7 +3359,9 @@
         twinCamera.position.set(34, 25, 40);
 
         twinRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-        twinRenderer.setSize(width, height);
+        /* false: leave the displayed size to CSS and size only the drawing
+           buffer, so the renderer cannot overwrite the canvas height. */
+        twinRenderer.setSize(width, height, false);
         twinRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         twinRenderer.shadowMap.enabled = true;
 
@@ -3370,7 +3371,9 @@
           twinControls.dampingFactor = 0.05;
           twinControls.maxPolarAngle = Math.PI / 2 - 0.05;
           twinControls.minDistance = 14;
-          twinControls.maxDistance = 95;
+          /* The portrait pull-back can exceed the old 95 limit, and OrbitControls
+             would drag the camera back in on its first update. */
+          twinControls.maxDistance = 220;
           twinControls.target.set(0, 6, 0);
 
           /* Keep the page scrolling when the pointer crosses the canvas.
@@ -3387,6 +3390,10 @@
             twinControls.enabled = false;
           }
         }
+
+        /* Frame the opening view for whatever shape this canvas actually is,
+           rather than the wide one the coordinates were tuned against. */
+        applyTwinView(twinCurrentView);
 
         // Daylight Environment Lighting
         const amb = new THREE.AmbientLight(0xffffff, 1.2);
@@ -3627,37 +3634,82 @@
       }
     }
 
+    /* A PerspectiveCamera's fov is VERTICAL, so a tall narrow canvas sees far
+       less of the scene sideways than a wide one: at the desktop's ~2:1 the
+       camera spans about 80 degrees horizontally, but on a portrait phone only
+       about 43, which crops the switchyard to a close-up. The horizontal extent
+       visible at a distance is proportional to distance x aspect, so holding
+       (distance x aspect) constant against a reference aspect restores the
+       intended framing on any shape of canvas. */
+    /* The canvas's own box. Its parent also holds the telemetry drawer on a
+       phone, so measuring the parent reported a viewport about twice as tall as
+       the canvas, and the camera cropped the scene to a close-up. */
+    function twinCanvasSize() {
+      const canvas = document.getElementById('digital-twin-canvas');
+      const r = canvas.getBoundingClientRect();
+      return { width: Math.max(1, Math.round(r.width)), height: Math.max(1, Math.round(r.height)) };
+    }
+
+    const TWIN_REF_ASPECT = 1.9;
+    const TWIN_MAX_PULLBACK = 1.8;
+    const TWIN_BASE_FOG = 0.012;
+    let twinCurrentView = { x: 34, y: 25, z: 40, tx: 0, ty: 6, tz: 0 };
+
+    function twinPullback() {
+      const aspect = (twinCamera && twinCamera.aspect) || TWIN_REF_ASPECT;
+      if (aspect >= TWIN_REF_ASPECT) return 1;
+      /* Square root rather than the full ratio. Restoring the whole horizontal
+         extent overshoots, because a portrait canvas gains vertical room at the
+         same time, and the camera ends up so far back that the exponential fog
+         bleaches the scene. */
+      return Math.min(Math.sqrt(TWIN_REF_ASPECT / aspect), TWIN_MAX_PULLBACK);
+    }
+
+    /* Keeps the preset's direction and target, moving the camera along that same
+       line only as far as the current canvas shape requires. */
+    function applyTwinView(v) {
+      if (!twinCamera) return;
+      twinCurrentView = v;
+      const k = twinPullback();
+      twinCamera.position.set(v.tx + (v.x - v.tx) * k,
+                              v.ty + (v.y - v.ty) * k,
+                              v.tz + (v.z - v.tz) * k);
+      if (twinControls) twinControls.target.set(v.tx, v.ty, v.tz);
+      /* FogExp2 thickens with the square of distance, so without this the haze
+         would wash the scene out exactly as the camera pulls back. */
+      if (twinScene && twinScene.fog) twinScene.fog.density = TWIN_BASE_FOG / k;
+      twinCamera.updateProjectionMatrix();
+    }
+
     function onTwinWindowResize() {
       const canvas = document.getElementById('digital-twin-canvas');
       if (!canvas || !twinRenderer || !twinCamera) return;
-      const width = canvas.parentElement.clientWidth;
-      const height = canvas.parentElement.clientHeight;
+      const { width, height } = twinCanvasSize();
       twinCamera.aspect = width / height;
       twinCamera.updateProjectionMatrix();
-      twinRenderer.setSize(width, height);
+      twinRenderer.setSize(width, height, false);
+      /* Rotating the phone changes the aspect, so the framing is recomputed. */
+      applyTwinView(twinCurrentView);
     }
 
     // Camera Presets
     document.getElementById('view-orbit')?.addEventListener('click', function() {
-      setCameraView(34, 25, 40, 0, 6, 0, this);
+      setCameraView({ x: 34, y: 25, z: 40, tx: 0, ty: 6, tz: 0 }, this);
     });
     document.getElementById('view-transformer')?.addEventListener('click', function() {
-      setCameraView(14, 11, 17, 0, 5, 0, this);
+      setCameraView({ x: 14, y: 11, z: 17, tx: 0, ty: 5, tz: 0 }, this);
     });
     document.getElementById('view-gantry')?.addEventListener('click', function() {
-      setCameraView(-6, 20, 26, 0, 18, 13, this);
+      setCameraView({ x: -6, y: 20, z: 26, tx: 0, ty: 18, tz: 13 }, this);
     });
     document.getElementById('view-breaker')?.addEventListener('click', function() {
-      setCameraView(0, 9, 18, 0, 4, 7.5, this);
+      setCameraView({ x: 0, y: 9, z: 18, tx: 0, ty: 4, tz: 7.5 }, this);
     });
 
-    function setCameraView(x, y, z, tx, ty, tz, btn) {
+    function setCameraView(view, btn) {
       document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      if (twinCamera && twinControls) {
-        twinCamera.position.set(x, y, z);
-        twinControls.target.set(tx, ty, tz);
-      }
+      applyTwinView(view);
     }
 
     document.getElementById('btn-toggle-night')?.addEventListener('click', function() {
