@@ -1176,6 +1176,40 @@
       cursor: pointer;
       position: relative;
       box-shadow: var(--shadow-sm);
+      /* These are <button> elements so they can be reached by Tab and fired by
+         Enter; a div with onclick could be used by a mouse alone. */
+      display: block;
+      width: 100%;
+      font: inherit;
+      color: inherit;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .iso-card:focus-visible {
+      outline: none;
+      border-color: var(--green-emerald);
+      box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.15);
+    }
+    .iso-view-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-top: 1.1rem;
+      padding: 0.5rem 0.9rem;
+      border-radius: 6px;
+      background: var(--green-wash);
+      border: 1px solid rgba(21, 128, 61, 0.3);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--green-emerald);
+      transition: var(--transition);
+    }
+    .iso-card:hover .iso-view-link,
+    .iso-card:focus-visible .iso-view-link {
+      background: var(--green-emerald);
+      border-color: var(--green-emerald);
+      color: #ffffff;
     }
     .iso-card:hover {
       border-color: var(--green-emerald);
@@ -1195,7 +1229,15 @@
       font-size: 1.8rem;
       color: var(--green-emerald);
     }
-    .iso-code { font-family: var(--font-display); font-size: 1.35rem; font-weight: 800; color: var(--green-forest); margin-bottom: 0.3rem; }
+    .iso-code {
+      font-family: var(--font-display);
+      /* 1.35rem broke "ISO 14001:2015" across two lines in a four-column row. */
+      font-size: clamp(1.05rem, 1.5vw, 1.3rem);
+      font-weight: 800;
+      color: var(--green-forest);
+      margin-bottom: 0.3rem;
+      white-space: nowrap;
+    }
     .iso-name { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.85rem; line-height: 1.4; }
     .iso-cert-no { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-subtle); border-top: 1px solid var(--wheat-border); padding-top: 0.75rem; }
 
@@ -2444,41 +2486,45 @@
           CHAPTER 06 // THE IRONCLAD STANDARD
         </div>
         <h2 class="section-headline">
-          Certified by <span class="brush-highlight">IRCLASS & Government Authorities</span>
+          Certified to <span class="brush-highlight">ISO Standards &amp; Licensed by the State</span>
         </h2>
         <p class="section-subtext">
-          Zero-compromise Quality, Environmental, and Occupational Safety Management frameworks certified by Indian Register Quality Systems (IRCLASS) under NABCB and RvA accreditations.
+          Quality, environmental and occupational safety management systems assessed by Royal Assessments Pvt. Ltd. under EGAC accreditation, alongside the Tamil Nadu electrical contractors licence. Open any card to read the document itself.
         </p>
       </div>
 
       <div class="iso-tier-grid">
-        <div class="iso-card" onclick="openCertModal('iso9001')">
+        <button type="button" class="iso-card" onclick="openCertModal('iso9001')">
           <div class="iso-icon-wrap"><i class="fa-solid fa-award"></i></div>
           <div class="iso-code">ISO 9001:2015</div>
           <div class="iso-name">Quality Management System (QMS)</div>
-          <div class="iso-cert-no">IRQS/210100780 • NABCB QM 006</div>
-        </div>
+          <div class="iso-cert-no">Royal Assessments • EGAC accredited</div>
+          <span class="iso-view-link"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> View certificate</span>
+        </button>
 
-        <div class="iso-card" onclick="openCertModal('iso14001')">
+        <button type="button" class="iso-card" onclick="openCertModal('iso14001')">
           <div class="iso-icon-wrap"><i class="fa-solid fa-leaf"></i></div>
           <div class="iso-code">ISO 14001:2015</div>
           <div class="iso-name">Environmental Management (EMS)</div>
-          <div class="iso-cert-no">IRQS/220300288 • RvA C071</div>
-        </div>
+          <div class="iso-cert-no">Royal Assessments • EGAC accredited</div>
+          <span class="iso-view-link"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> View certificate</span>
+        </button>
 
-        <div class="iso-card" onclick="openCertModal('iso45001')">
+        <button type="button" class="iso-card" onclick="openCertModal('iso45001')">
           <div class="iso-icon-wrap"><i class="fa-solid fa-helmet-safety"></i></div>
           <div class="iso-code">ISO 45001:2018</div>
-          <div class="iso-name">Health & Safety Management (OHSMS)</div>
-          <div class="iso-cert-no">IRQS/220400289 • NABCB OH 007</div>
-        </div>
+          <div class="iso-name">Health &amp; Safety Management (OHSMS)</div>
+          <div class="iso-cert-no">Royal Assessments • EGAC accredited</div>
+          <span class="iso-view-link"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> View certificate</span>
+        </button>
 
-        <div class="iso-card" onclick="openCertModal('ceig')">
+        <button type="button" class="iso-card" onclick="openCertModal('ceig')">
           <div class="iso-icon-wrap" style="color:var(--hazard-amber); border-color:rgba(217, 119, 6, 0.4);"><i class="fa-solid fa-stamp"></i></div>
-          <div class="iso-code" style="color:var(--hazard-amber);">ESA GRADE A</div>
-          <div class="iso-name">CEIG Government Electrical Contractor</div>
-          <div class="iso-cert-no">Govt. of Tamil Nadu • Direct Sanction</div>
-        </div>
+          <div class="iso-code" style="color:var(--hazard-amber);">ESA GRADE &lsquo;SA&rsquo;</div>
+          <div class="iso-name">Electrical Licensing Board, Tamil Nadu</div>
+          <div class="iso-cert-no">Licence No. ESA 621 • 18 Aug 2025</div>
+          <span class="iso-view-link"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> View certificate</span>
+        </button>
       </div>
     </div>
   </section>
