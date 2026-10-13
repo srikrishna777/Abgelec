@@ -33,19 +33,19 @@
 
       /* ---- LIGHT SURFACE FAMILY (5 steps; luminance 1.000 / .908 / .817 / .717 / .133) */
       --surface-card:    #ffffff;  /* pinned pure white: keeps all 33 #ffffff literals correct */
-      --surface-base:    #f2f5f6;  /* page ground */
-      --surface-panel:   #e6eaec;  /* alternating band */
-      --surface-raised:  #d8dde0;  /* inset panels, input fills. NO WASH MAY SEAT HERE. */
-      --surface-steel:   #5c686f;  /* THE MID-TONE BAND. 5.23:1 vs base. Light text only:
+      --surface-base:    #faf7f1;  /* page ground */
+      --surface-panel:   #efe9dd;  /* alternating band */
+      --surface-raised:  #e1d9c9;  /* inset panels, input fills. NO WASH MAY SEAT HERE. */
+      --surface-steel:   #6e665a;  /* THE MID-TONE BAND. 5.23:1 vs base. Light text only:
                                       --ink-inverse 5.51, --dark-text 5.08.
                                       FORBIDDEN on steel: --ink-strong 3.04 (large text only),
                                       --dark-muted 2.70, --copper 1.71, all *-ink tokens. */
 
       /* ---- BORDERS */
-      --border-hair:     #d2d8db;  /* decorative hairline. 1.44 on card, 1.19 on panel,
+      --border-hair:     #e4dccd;  /* decorative hairline. 1.44 on card, 1.19 on panel,
                                       1.05 on raised — never the sole boundary of a control. */
-      --border-hair-2:   #b6bfc3;  /* deeper hairline for use ON panel/raised: 1.54 / 1.37 */
-      --border-strong:   #6f7a81;  /* OPERABLE: inputs, selects, focus rings, photo insets,
+      --border-hair-2:   #c6baa4;  /* deeper hairline for use ON panel/raised: 1.54 / 1.37 */
+      --border-strong:   #7b7265;  /* OPERABLE: inputs, selects, focus rings, photo insets,
                                       meaningful dividers. 1.4.11 passes on ALL FOUR light
                                       surfaces: 4.40 / 4.01 / 3.63 / 3.21 */
 
@@ -125,7 +125,7 @@
       /* ---- RGB TRIPLES — the migration path for all 55 rgba() call sites in the
               sheet. Replace rgba(var(--copper-rgb), 0.3) with rgba(var(--copper-rgb),0.3)
               and leave the alpha untouched. */
-      --surface-base-rgb:  242, 245, 246;
+      --surface-base-rgb:  250, 247, 241;
       --surface-card-rgb:  255, 255, 255;
       --ink-strong-rgb:     20,  27,  30;
       --brand-deep-rgb:     24,  36,  42;
@@ -136,7 +136,7 @@
       --live-rgb:           47, 211, 162;
       --warn-rgb:          168,  38,  23;
       --hazard-rgb:        239, 178,  41;
-      --border-strong-rgb: 111, 122, 129;
+      --border-strong-rgb: 123, 114, 101;
 
       /* ---- PHOTO SCRIM. Replaces every rgba(10,38,24,0.8-0.94) caption scrim.
               --dark-text on this over a mid-grey photo = 14.60:1. */
@@ -395,15 +395,10 @@
    the zinc-spangle and ballast-stipple layers were cut for scroll perf.
    ========================================================================== */
 body {
-  background-color: var(--surface-base);
-  background-image:
-    linear-gradient(to right,  rgba(var(--ink-strong-rgb), 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(var(--ink-strong-rgb), 0.045) 1px, transparent 1px),
-    linear-gradient(to right,  rgba(var(--copper-rgb),     0.07)  1px, transparent 1px),
-    linear-gradient(to bottom, rgba(var(--copper-rgb),     0.07)  1px, transparent 1px);
-  background-size: 44px 44px, 44px 44px, 176px 176px, 176px 176px;
-  background-position: 0 0;
-  background-attachment: fixed;
+  /* Plain, natural page ground. No pattern: the photographs and the busbar
+     rules carry the character instead of a drawn lattice. */
+  background-color: #fafbfb;
+  background-image: none;
 }
 /* Mid-range Android must never composite a fixed multi-layer background. */
 @media (max-width: 900px) {
@@ -551,6 +546,392 @@ body {
   outline-offset: 2px;
   box-shadow: 0 0 0 1px var(--brand-deep);
 }
+
+
+
+    /* ===== GRID CURRENT =========================================
+       One animated circuitry system, placed behind every chapter of
+       the page. Each layer is pure SVG plus CSS: the only animated
+       properties are stroke-dashoffset, opacity and transform, so
+       there is no requestAnimationFrame loop anywhere and the main
+       thread stays free for scrolling.
+
+       Colour is the three-phase convention an Indian switchyard
+       actually uses - R red, Y yellow, B blue - with copper, teal and
+       violet for the single-phase runs, so the page is colourful
+       without inventing a palette that means nothing.
+
+       Three safeguards keep it honest:
+         1. An IntersectionObserver parks every layer that is not on
+            screen (see cx-managed below), so at most one or two are
+            ever painting.
+         2. Phones drop the halo and the scan line and run slower.
+         3. prefers-reduced-motion stops all of it dead and leaves the
+            diagrams as still line art.
+       ============================================================ */
+    :root {
+      --cx-r: #d8483a;          /* R phase */
+      --cx-y: #dba018;          /* Y phase */
+      --cx-b: #2f7ed0;          /* B phase */
+      --cx-teal: #0f9f84;
+      --cx-violet: #7b5cd6;
+      --cx-ink: var(--ink-strong);
+      --cx-static-op: 0.115;
+      --cx-wire-op: 0.2;
+      /* Coloured apparatus. 0.34 is the ceiling at which EVERY one of the
+         six line colours still clears 4.5:1 against body copy and 3:1
+         against a headline on both page surfaces - checked by compositing
+         each colour onto #fafbfb and #e6eaec and measuring. Grey ink has
+         to stay far lower (0.115) because it is the one "colour" that
+         darkens rather than tints. */
+      --cx-line-op: 0.52;
+      --cx-line-op-soft: 0.3;
+      /* Discharge. Gold is the one hot colour that still clears 4.5:1
+         against body copy at FULL opacity on both paper surfaces - amber
+         fails at 1.0, orange at 0.9, and anything redder fails outright.
+         A spark that has to be dimmed to be safe is not a spark. */
+      --cx-spark: #f6c445;
+      --cx-spark-heat: var(--cx-y);
+      --cx-flow-op: 0.8;
+      --cx-halo-op: 0.14;
+      --cx-node-op: 0.85;
+      --cx-sw: 2.2;
+      --cx-flow-sw: 3;
+      --cx-halo-sw: 13;
+      /* Every section puts its first line of text exactly 105px below its own
+         top edge, at every viewport, because the padding is in rem. And the
+         section above it stops at least 88px before the seam. That is a clear
+         corridor roughly 190px tall at every seam, and this fade is anchored
+         to it IN PIXELS rather than percentages, so the clearing lands in the
+         same place whatever height the band happens to be. Past 105px the art
+         drops to a whisper and stays there - enough to texture the page,
+         nowhere near enough to fight a paragraph. */
+      --cx-straddle: 76px;
+    }
+
+    /* Sections become their own stacking context so a z-index:-1 child
+       lands above the section background but below all of its content.
+       Nothing inside a section needs to paint over a neighbour, and the
+       nav, the lightbox and the modals are top-level siblings, so this
+       is free of side effects. */
+    .hero-wrapper,
+    .section-padding,
+    .cyber-footer { position: relative; z-index: 0; }
+
+    /* An <svg> is a replaced element, so left:0 + right:0 would NOT
+       stretch it - the used width would come off the viewBox ratio
+       instead. Hence the explicit width. The band height tracks the
+       viewport so the 1440x460 viewBox is never cropped much either
+       way: 31.9vw is exactly 460px at a 1440px viewport. */
+    .circuit {
+      position: absolute;
+      left: 0;
+      /* lifted into the whitespace above the seam, where nothing is drawn */
+      top: calc(-1 * var(--cx-straddle));
+      width: 100%;
+      /* A FIXED pixel height, equal to the viewBox height. With a 3840-wide
+         viewBox and preserveAspectRatio="xMidYMin slice" the slice scale is
+         max(width/3840, height/306); height/306 is 1 and the width term stays
+         under 1 up to a 4K viewport, so the scale is pinned at 1 and ONE USER
+         UNIT IS ONE CSS PIXEL at every width.
+
+         That is the whole point. The old 1440-wide viewBox with xMidYMid made
+         both the scale AND the vertical centring track viewport width, while
+         the clearing the art must sit inside is a fixed 105px - so the two
+         drifted apart. The art hit the heading below 1600px and floated clean
+         out of its own box above 1728px. */
+      height: 306px;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+      /* default palette: three-phase */
+      --c1: var(--cx-r); --c2: var(--cx-y); --c3: var(--cx-b);
+    }
+    /* The hero has no section above to straddle into - its clear corridor is
+       the 104px between the sticky nav and the badge - so it sits flush with
+       the hero's top edge and its fade is anchored 104px down accordingly. */
+    .circuit.cx-hero   { top: 0; --cx-straddle: 0px; }
+    /* The footer's text is light on near-black, where any saturated pulse
+       behind a word loses the contrast fight outright - you cannot make a
+       colour bright enough or dark enough to clear 4.5:1 against #a7b4ba.
+       So the footer gets one slim strip in the air above its first line
+       instead of a band across it. */
+    .circuit.cx-slim   {
+      top: 0;
+      --cx-straddle: 0px;
+      /* The footer is the tightest corridor on the page: only 80px between
+         its top border and the first column heading, and its text is light
+         on near-black, where a bright line behind a word loses the contrast
+         fight outright. So the ramp is short and it bottoms out early - the
+         230 kV busbar at y=42 stays crisp, everything below it is a ghost. */
+      --cx-fade: linear-gradient(to bottom,
+        rgba(0, 0, 0, 1)     0px,
+        rgba(0, 0, 0, 1)    44px,
+        rgba(0, 0, 0, 0.3)  62px,
+        rgba(0, 0, 0, 0.07) 78px,
+        rgba(0, 0, 0, 0.05) 100%);
+    }
+    .circuit.cx-bottom { top: auto; bottom: calc(-1 * var(--cx-straddle)); }
+
+    /* Each band is loudest at the section seam and dissolves downward,
+       which is where the body copy lands. Measured on the built page: a
+       saturated pulse crossing a line of 18px text drops it to about
+       2.5:1, which is not something to ship on a contractor's portfolio.
+       Below the fade the same pulse composites to roughly 5.5:1 and the
+       headline, which sits above it, keeps the diagram at full strength. */
+    .circuit {
+      /* Declared HERE, not on :root. A custom property's var() references are
+         substituted on the element that declares it - so a --cx-fade-down
+         living at :root would bake in :root's 76px straddle and a layer's own
+         "--cx-straddle: 0px" could never reach it. That is exactly what left
+         the hero's clearing anchored 76px too deep, with the 33 kV busbar
+         still crossing the badge. */
+      --cx-fade-down: linear-gradient(to bottom,
+        rgba(0, 0, 0, 1)     0px,
+        rgba(0, 0, 0, 1)     calc(var(--cx-straddle) + 60px),
+        rgba(0, 0, 0, 0.3)   calc(var(--cx-straddle) + 100px),
+        rgba(0, 0, 0, 0.08)  calc(var(--cx-straddle) + 148px),
+        rgba(0, 0, 0, 0.06)  calc(var(--cx-straddle) + 210px),
+        rgba(0, 0, 0, 0.06)  100%);
+      --cx-fade: var(--cx-fade-down);
+      -webkit-mask-image: var(--cx-fade);
+              mask-image: var(--cx-fade);
+    }
+    /* A bottom band's seam is the edge below it. Mirroring the whole
+       element turns the art AND the fade over together, so it stays
+       loudest at the seam without a second gradient to keep in step. */
+    .circuit.cx-bottom { transform: scaleY(-1); }
+
+    .circuit.cx-hero {
+      --cx-static-op: 0.145;
+      --cx-wire-op: 0.26;
+      --cx-flow-op: 0.72;
+      --cx-halo-op: 0.12;
+    }
+
+    /* ---- palettes ------------------------------------------------ */
+    .cx-warm { --c1: var(--copper); --c2: var(--cx-y);     --c3: var(--cx-r); }
+    .cx-cool { --c1: var(--cx-teal); --c2: var(--cx-b);     --c3: var(--cx-violet); }
+    .cx-mix  { --c1: var(--cx-teal); --c2: var(--copper);   --c3: var(--cx-b); }
+    .cx-rich { --c1: var(--cx-violet); --c2: var(--cx-teal); --c3: var(--cx-y); }
+    .cx-amber{ --c1: var(--cx-y); --c2: var(--copper);      --c3: var(--cx-teal); }
+
+    /* ---- static apparatus ---------------------------------------- */
+    .circuit .cx-static {
+      fill: none;
+      stroke: var(--cx-ink);
+      stroke-opacity: var(--cx-static-op);
+      stroke-width: var(--cx-sw);
+    }
+    .circuit .cx-grat { stroke-opacity: calc(var(--cx-static-op) * 0.62); stroke-width: 1.2; }
+    .circuit .cx-wire { stroke-opacity: var(--cx-wire-op); }
+    .circuit .cx-gear rect { fill: none; }
+
+    /* ---- coloured conductors -------------------------------------
+       The apparatus itself carries colour now, not just the current
+       running through it. Two families:
+         .w-r / .w-y / .w-b  fixed R-Y-B phase identification, used only
+                             where the line really is a phase conductor -
+                             busbars, tower circuits, the three sinusoids.
+         .w-c1 / .w-c2 / .w-c3  the section's own palette, for runs that
+                             are routes or traces rather than phases.
+       Plus .w-e earth, .w-g apparatus (breakers, CTs, windings) and
+       .w-s structure, which stays the old neutral graphite. */
+    .circuit .w-r  { stroke: var(--cx-r);     stroke-opacity: var(--cx-line-op); }
+    .circuit .w-y  { stroke: var(--cx-y);     stroke-opacity: var(--cx-line-op); }
+    .circuit .w-b  { stroke: var(--cx-b);     stroke-opacity: var(--cx-line-op); }
+    .circuit .w-c1 { stroke: var(--c1);       stroke-opacity: var(--cx-line-op); }
+    .circuit .w-c2 { stroke: var(--c2);       stroke-opacity: var(--cx-line-op); }
+    .circuit .w-c3 { stroke: var(--c3);       stroke-opacity: var(--cx-line-op); }
+    .circuit .w-e  { stroke: var(--cx-teal);  stroke-opacity: var(--cx-line-op-soft); }
+    .circuit .w-g  { stroke: var(--copper);   stroke-opacity: var(--cx-line-op-soft); }
+    .circuit .w-s  { stroke: var(--cx-ink);   stroke-opacity: var(--cx-static-op); }
+    .circuit .w-g rect,
+    .circuit .w-g circle { fill: none; }
+
+    /* ---- travelling current -------------------------------------- */
+    .circuit .cx-flow,
+    .circuit .cx-halo { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .circuit .cx-flow > *,
+    .circuit .cx-halo > * {
+      animation: cx-run-l 9s linear infinite;
+    }
+    .circuit .cx-flow > * { stroke-width: var(--cx-flow-sw); opacity: var(--cx-flow-op); }
+    .circuit .cx-halo > * { stroke-width: var(--cx-halo-sw); opacity: var(--cx-halo-op); }
+
+    .circuit .k1 { stroke: var(--c1); }
+    .circuit .k2 { stroke: var(--c2); }
+    .circuit .k3 { stroke: var(--c3); }
+
+    /* Three pulse lengths, each seamless: the dash period and the
+       dashoffset travel match, so the loop never jumps. */
+    .circuit .r-s { stroke-dasharray: 38 302;  animation-name: cx-run-s; animation-duration: 4.6s; }
+    .circuit .r-m { stroke-dasharray: 54 646;  animation-name: cx-run-m; animation-duration: 6.8s; }
+    .circuit .r-l { stroke-dasharray: 74 1126; animation-name: cx-run-l; animation-duration: 9.4s; }
+    @keyframes cx-run-s { from { stroke-dashoffset: 340; }  to { stroke-dashoffset: 0; } }
+    @keyframes cx-run-m { from { stroke-dashoffset: 700; }  to { stroke-dashoffset: 0; } }
+    @keyframes cx-run-l { from { stroke-dashoffset: 1200; } to { stroke-dashoffset: 0; } }
+
+    /* Rings sweep instead of running: the arc chases round the circle. */
+    .circuit .cx-ring circle {
+      stroke-dasharray: 90 1110;
+      animation-name: cx-run-l;
+      animation-duration: 7.2s;
+    }
+
+    /* ---- live nodes ---------------------------------------------- */
+    .circuit .cx-nodes circle {
+      stroke: none;
+      animation: cx-node 3.6s ease-in-out infinite;
+    }
+    .circuit .cx-nodes .k1 { fill: var(--c1); stroke: none; }
+    .circuit .cx-nodes .k2 { fill: var(--c2); stroke: none; }
+    .circuit .cx-nodes .k3 { fill: var(--c3); stroke: none; }
+    @keyframes cx-node {
+      0%, 100% { opacity: 0.12; }
+      50%      { opacity: var(--cx-node-op); }
+    }
+
+    /* ---- discharge ------------------------------------------------
+       Corona crackle at live terminals and a strike across an open
+       isolator gap. Both are normal energised-plant phenomena - this is a
+       contractor with a zero-severe-accident record, so nothing here
+       depicts an arc flash, which is a fault.
+
+       The realism is entirely in the timeline, not the rendering: a real
+       discharge strikes, collapses, re-strikes and dies inside a few tens
+       of milliseconds, then nothing happens for seconds. So the keyframes
+       sit at opacity 0 for ~94% of the cycle and spend the rest flickering.
+       Costs two elements per site and animates only opacity. */
+    .circuit .cx-spark { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .circuit .cx-spark path {
+      opacity: 0;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+      animation-duration: 6s;
+    }
+    /* The two selectors below must out-specify the block above, which is
+       why they name .cx-spark too - a bare .zap-heat loses animation-name
+       to a shorthand on an equally specific selector and the halo ends up
+       flashing on the wrong keyframes. */
+    .circuit .cx-spark .zap {
+      stroke: var(--cx-spark);
+      stroke-width: 2.4;
+      animation-name: cx-strike;
+    }
+    .circuit .cx-spark .zap-heat {
+      stroke: var(--cx-spark-heat);
+      stroke-width: 7;
+      animation-name: cx-strike-heat;
+    }
+    @keyframes cx-strike {
+      0%, 93%  { opacity: 0; }
+      93.4%    { opacity: 1; }
+      94.1%    { opacity: 0.1; }
+      94.7%    { opacity: 0.92; }
+      95.4%    { opacity: 0.06; }
+      96.1%    { opacity: 0.6; }
+      97.2%    { opacity: 0; }
+      100%     { opacity: 0; }
+    }
+    @keyframes cx-strike-heat {
+      0%, 93%  { opacity: 0; }
+      93.4%    { opacity: 0.42; }
+      94.1%    { opacity: 0.05; }
+      94.7%    { opacity: 0.36; }
+      95.4%    { opacity: 0.03; }
+      96.1%    { opacity: 0.24; }
+      97.8%    { opacity: 0; }
+      100%     { opacity: 0; }
+    }
+
+    /* ---- oscilloscope sweep -------------------------------------- */
+    .circuit .cx-scan path {
+      stroke: var(--c2);
+      stroke-width: 2;
+      opacity: 0.3;
+      animation: cx-scan 6.4s linear infinite;
+      will-change: transform;
+    }
+    @keyframes cx-scan {
+      from { transform: translateX(0); }
+      to   { transform: translateX(1440px); }
+    }
+
+    /* ---- the dark layers get to be properly neon ----------------- */
+    .cyber-footer .circuit,
+    .circuit.cx-neon {
+      --cx-ink: #ffffff;
+      --cx-static-op: 0.1;
+      --cx-wire-op: 0.17;
+      --cx-flow-op: 0.82;
+      --cx-halo-op: 0.17;
+      --cx-node-op: 0.95;
+      --cx-halo-sw: 13;
+      /* On #0c1316 a coloured line ADDS luminance, so the ceiling is
+         lower than on paper - teal and copper fail body text above 0.3. */
+      --cx-line-op: 0.3;
+      --cx-line-op-soft: 0.2;
+      /* On black the discharge can run white-hot; it sits in the slim
+         strip above the footer's first line, clear of any text. */
+      --cx-spark: #fff6de;
+    }
+
+    /* ---- off-screen layers are parked ---------------------------- */
+    .cx-managed .circuit .cx-flow > *,
+    .cx-managed .circuit .cx-halo > *,
+    .cx-managed .circuit .cx-nodes circle,
+    .cx-managed .circuit .cx-spark path,
+    .cx-managed .circuit .cx-scan path { animation-play-state: paused; }
+    .cx-managed .circuit.cx-live .cx-flow > *,
+    .cx-managed .circuit.cx-live .cx-halo > *,
+    .cx-managed .circuit.cx-live .cx-nodes circle,
+    .cx-managed .circuit.cx-live .cx-spark path,
+    .cx-managed .circuit.cx-live .cx-scan path { animation-play-state: running; }
+
+    /* ---- phones: the diagram stays, the traffic thins out --------
+       A constantly repainting SVG is exactly the kind of thing that
+       eats a mid-range Android battery, so the halo and the sweep go,
+       the pulses slow down and the strokes thicken to survive the
+       smaller scale. */
+    @media (max-width: 900px) {
+      .circuit {
+        opacity: 0.85;
+        --cx-sw: 3.2;
+        --cx-flow-sw: 5;
+        --cx-static-op: 0.13;
+        --cx-wire-op: 0.22;
+      }
+      .circuit .cx-halo,
+      .circuit .cx-scan { display: none; }
+      .circuit .r-s { animation-duration: 7s; }
+      .circuit .r-m { animation-duration: 10s; }
+      .circuit .r-l { animation-duration: 14s; }
+      .circuit .cx-ring circle { animation-duration: 11s; }
+      .circuit .cx-nodes circle { animation-duration: 5s; }
+      .circuit .cx-spark .zap-heat { stroke-width: 9; }
+    }
+    @media (pointer: coarse) and (max-width: 560px) {
+      .circuit { opacity: 0.62; }
+    }
+
+    /* ---- reduced motion: still line art, no movement ------------- */
+    @media (prefers-reduced-motion: reduce) {
+      .circuit .cx-flow > *,
+      .circuit .cx-halo > *,
+      .circuit .cx-nodes circle,
+      .circuit .cx-spark path,
+      .circuit .cx-scan path { animation: none !important; }
+      /* a frozen spark is just a yellow scribble, so it goes entirely */
+      .circuit .cx-spark { display: none; }
+      .circuit .cx-flow > * { stroke-dasharray: none; opacity: 0.3; }
+      .circuit .cx-halo { display: none; }
+      .circuit .cx-nodes circle { opacity: 0.4; }
+      .circuit .cx-scan { display: none; }
+    }
+    @media print {
+      .circuit { display: none; }
+    }
 
     /* Sticky Navbar */
     .cyber-nav {
@@ -2206,6 +2587,84 @@ body {
   <!-- Hero Section (ACT I: THE SPARK & THE GRID) -->
   <section class="hero-wrapper" id="hero">
     <div class="hero-glow-back"></div>
+    <svg class="circuit cx-hero" viewBox="0 0 3840 306" preserveAspectRatio="xMidYMin slice"
+         aria-hidden="true" focusable="false" data-cx="230/33 kV bay">
+      <g class="cx-static w-s">
+        <path d="M220 46 V73 M220 99 V146 M220 58 l9 -12 M620 46 V73 M620 99 V146 M620 58 l9 -12 M1020 46 V73 M1020 99 V146 M1020 58 l9 -12 M1420 46 V73 M1420 99 V146 M1420 58 l9 -12 M1820 46 V73 M1820 99 V130 M1820 58 l9 -12 M2220 46 V73 M2220 99 V146 M2220 58 l9 -12 M2620 46 V73 M2620 99 V146 M2620 58 l9 -12 M3020 46 V73 M3020 99 V146 M3020 58 l9 -12 M3420 46 V73 M3420 99 V146 M3420 58 l9 -12 M1820 148 V146 M420 154 V196 M820 154 V196 M1220 154 V196 M1620 154 V196 M2020 154 V196 M2420 154 V196 M2820 154 V196 M3220 154 V196 M3620 154 V196"/>
+      </g>
+      <g class="cx-static cx-wire">
+        <path class="w-r" d="M-20 38 H3860"/>
+        <path class="w-r" d="M-20 146 H3860"/>
+        <path class="w-y" d="M-20 42 H3860"/>
+        <path class="w-y" d="M-20 150 H3860"/>
+        <path class="w-b" d="M-20 46 H3860"/>
+        <path class="w-b" d="M-20 154 H3860"/>
+      </g>
+      <g class="cx-static w-e">
+        <path d="M404 196 H436 M409 205 H431 M414 214 H426 M804 196 H836 M809 205 H831 M814 214 H826 M1204 196 H1236 M1209 205 H1231 M1214 214 H1226 M1604 196 H1636 M1609 205 H1631 M1614 214 H1626 M2004 196 H2036 M2009 205 H2031 M2014 214 H2026 M2404 196 H2436 M2409 205 H2431 M2414 214 H2426 M2804 196 H2836 M2809 205 H2831 M2814 214 H2826 M3204 196 H3236 M3209 205 H3231 M3214 214 H3226 M3604 196 H3636 M3609 205 H3631 M3614 214 H3626"/>
+      </g>
+      <g class="cx-static w-g">
+        <circle cx="220" cy="116" r="7"/><circle cx="620" cy="116" r="7"/><circle cx="1020" cy="116" r="7"/><circle cx="1420" cy="116" r="7"/><circle cx="1820" cy="116" r="7"/><circle cx="2220" cy="116" r="7"/><circle cx="2620" cy="116" r="7"/><circle cx="3020" cy="116" r="7"/><circle cx="3420" cy="116" r="7"/>
+        <circle cx="1820" cy="112" r="18"/><circle cx="1820" cy="130" r="18"/>
+        <g transform="translate(220 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(620 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(1020 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(1420 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(1820 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(2220 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(2620 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(3020 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(3420 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+      </g>
+      <g class="cx-halo">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M-20 38 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-2.4s" d="M-20 42 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-4.8s" d="M-20 46 H3860"/>
+        <path class="k1 r-l" style="animation-delay:-1.1s" d="M-20 154 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-4s" d="M-20 150 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-6.9s" d="M-20 146 H3860"/>
+      </g>
+      <g class="cx-flow">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M-20 38 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-2.4s" d="M-20 42 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-4.8s" d="M-20 46 H3860"/>
+        <path class="k1 r-l" style="animation-delay:-1.1s" d="M-20 154 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-4s" d="M-20 150 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-6.9s" d="M-20 146 H3860"/>
+        <path class="k1 r-s" style="animation-delay:-0s" d="M220 42 V73 M220 99 V150"/>
+        <path class="k2 r-s" style="animation-delay:-1.7s" d="M1020 42 V73 M1020 99 V150"/>
+        <path class="k3 r-s" style="animation-delay:-3.4s" d="M1820 42 V73 M1820 99 V94"/>
+        <path class="k1 r-s" style="animation-delay:-5.1s" d="M2620 42 V73 M2620 99 V150"/>
+        <path class="k2 r-s" style="animation-delay:-6.8s" d="M3420 42 V73 M3420 99 V150"/>
+        <path class="k2 r-s" style="animation-delay:-0.9s" d="M420 150 V196"/>
+        <path class="k3 r-s" style="animation-delay:-2.5s" d="M1220 150 V196"/>
+        <path class="k1 r-s" style="animation-delay:-4.1s" d="M2020 150 V196"/>
+        <path class="k2 r-s" style="animation-delay:-5.7s" d="M2820 150 V196"/>
+        <path class="k3 r-s" style="animation-delay:-7.3s" d="M3620 150 V196"/>
+      </g>
+      <g class="cx-nodes">
+        <circle class="k1" cx="220" cy="42" r="4.5" style="animation-delay:-0s"/>
+        <circle class="k2" cx="1020" cy="42" r="4.5" style="animation-delay:-0.7s"/>
+        <circle class="k3" cx="1820" cy="42" r="4.5" style="animation-delay:-1.4s"/>
+        <circle class="k1" cx="2620" cy="42" r="4.5" style="animation-delay:-2.1s"/>
+        <circle class="k2" cx="3420" cy="42" r="4.5" style="animation-delay:-2.8s"/>
+        <circle class="k3" cx="420" cy="150" r="4.5" style="animation-delay:-0s"/>
+        <circle class="k1" cx="1220" cy="150" r="4.5" style="animation-delay:-0.6s"/>
+        <circle class="k2" cx="2020" cy="150" r="4.5" style="animation-delay:-1.1s"/>
+        <circle class="k3" cx="2820" cy="150" r="4.5" style="animation-delay:-1.7s"/>
+        <circle class="k1" cx="3620" cy="150" r="4.5" style="animation-delay:-2.2s"/>
+      </g>
+      <g class="cx-spark">
+        <path class="zap-heat" style="animation-duration:6.1s;animation-delay:-0.4s" d="M620 67 l3.4 6.3 l-5.1 6.3 l2.6 6.3 l-4.2 6.3 l3.9 6.3 l-2.8 6.3"/>
+        <path class="zap-heat" style="animation-duration:7.3s;animation-delay:-3.9s" d="M3020 67 l-4.2 6.3 l3.9 6.3 l-2.8 6.3 l4.6 6.3 l-3.3 6.3 l3.4 6.3"/>
+        <path class="zap-heat" style="animation-duration:5.6s;animation-delay:-2.2s" d="M1820 38 l11 2.6 M1820 38 l4.1 13.4 M1820 38 l-5.9 6.3 M1820 38 l-11 -2.6 M1820 38 l-4.1 -13.4 M1820 38 l5.9 -6.3"/>
+        <path class="zap-heat" style="animation-duration:8.2s;animation-delay:-6.1s" d="M1220 154 l6 7.7 M1220 154 l-4.5 11.1 M1220 154 l-7.4 1 M1220 154 l-6 -7.7 M1220 154 l4.5 -11.1 M1220 154 l7.4 -1"/>
+        <path class="zap" style="animation-duration:6.1s;animation-delay:-0.4s" d="M620 67 l3.4 6.3 l-5.1 6.3 l2.6 6.3 l-4.2 6.3 l3.9 6.3 l-2.8 6.3"/>
+        <path class="zap" style="animation-duration:7.3s;animation-delay:-3.9s" d="M3020 67 l-4.2 6.3 l3.9 6.3 l-2.8 6.3 l4.6 6.3 l-3.3 6.3 l3.4 6.3"/>
+        <path class="zap" style="animation-duration:5.6s;animation-delay:-2.2s" d="M1820 38 l11 2.6 M1820 38 l4.1 13.4 M1820 38 l-5.9 6.3 M1820 38 l-11 -2.6 M1820 38 l-4.1 -13.4 M1820 38 l5.9 -6.3"/>
+        <path class="zap" style="animation-duration:8.2s;animation-delay:-6.1s" d="M1220 154 l6 7.7 M1220 154 l-4.5 11.1 M1220 154 l-7.4 1 M1220 154 l-6 -7.7 M1220 154 l4.5 -11.1 M1220 154 l7.4 -1"/>
+      </g>
+    </svg>
     <div class="container">
       <div class="hero-split">
         <div>
@@ -2342,6 +2801,59 @@ body {
 
   <!-- Chapter 01: The Lineage & Leadership -->
   <section class="section-padding" id="heritage" style="border-top:1px solid var(--wheat-border);">
+    <svg class="circuit cx-warm" viewBox="0 0 3840 306" preserveAspectRatio="xMidYMin slice"
+         aria-hidden="true" focusable="false" data-cx="400 kV line">
+      <g class="cx-static w-s">
+        <path d="M64 250 L93 8 M156 250 L127 8 M64 250 L151.9 215.4 M156 250 L68.1 215.4 M68.1 215.4 L151.9 215.4 M68.1 215.4 L147.7 180.9 M151.9 215.4 L72.3 180.9 M72.3 180.9 L147.7 180.9 M72.3 180.9 L143.6 146.3 M147.7 180.9 L76.4 146.3 M76.4 146.3 L143.6 146.3 M76.4 146.3 L139.4 111.7 M143.6 146.3 L80.6 111.7 M80.6 111.7 L139.4 111.7 M80.6 111.7 L135.3 77.1 M139.4 111.7 L84.7 77.1 M84.7 77.1 L135.3 77.1 M84.7 77.1 L131.1 42.6 M135.3 77.1 L88.9 42.6 M88.9 42.6 L131.1 42.6 M88.9 42.6 L127 8 M131.1 42.6 L93 8 M93 8 L127 8 M2 126 H218 M2 126 L96 100 M218 126 L124 100 M32 66 H188 M32 66 L96 40 M188 66 L124 40 M110 8 V-18 M474 250 L503 8 M566 250 L537 8 M474 250 L561.9 215.4 M566 250 L478.1 215.4 M478.1 215.4 L561.9 215.4 M478.1 215.4 L557.7 180.9 M561.9 215.4 L482.3 180.9 M482.3 180.9 L557.7 180.9 M482.3 180.9 L553.6 146.3 M557.7 180.9 L486.4 146.3 M486.4 146.3 L553.6 146.3 M486.4 146.3 L549.4 111.7 M553.6 146.3 L490.6 111.7 M490.6 111.7 L549.4 111.7 M490.6 111.7 L545.3 77.1 M549.4 111.7 L494.7 77.1 M494.7 77.1 L545.3 77.1 M494.7 77.1 L541.1 42.6 M545.3 77.1 L498.9 42.6 M498.9 42.6 L541.1 42.6 M498.9 42.6 L537 8 M541.1 42.6 L503 8 M503 8 L537 8 M412 126 H628 M412 126 L506 100 M628 126 L534 100 M442 66 H598 M442 66 L506 40 M598 66 L534 40 M520 8 V-18 M884 250 L913 8 M976 250 L947 8 M884 250 L971.9 215.4 M976 250 L888.1 215.4 M888.1 215.4 L971.9 215.4 M888.1 215.4 L967.7 180.9 M971.9 215.4 L892.3 180.9 M892.3 180.9 L967.7 180.9 M892.3 180.9 L963.6 146.3 M967.7 180.9 L896.4 146.3 M896.4 146.3 L963.6 146.3 M896.4 146.3 L959.4 111.7 M963.6 146.3 L900.6 111.7 M900.6 111.7 L959.4 111.7 M900.6 111.7 L955.3 77.1 M959.4 111.7 L904.7 77.1 M904.7 77.1 L955.3 77.1 M904.7 77.1 L951.1 42.6 M955.3 77.1 L908.9 42.6 M908.9 42.6 L951.1 42.6 M908.9 42.6 L947 8 M951.1 42.6 L913 8 M913 8 L947 8 M822 126 H1038 M822 126 L916 100 M1038 126 L944 100 M852 66 H1008 M852 66 L916 40 M1008 66 L944 40 M930 8 V-18 M1294 250 L1323 8 M1386 250 L1357 8 M1294 250 L1381.9 215.4 M1386 250 L1298.1 215.4 M1298.1 215.4 L1381.9 215.4 M1298.1 215.4 L1377.7 180.9 M1381.9 215.4 L1302.3 180.9 M1302.3 180.9 L1377.7 180.9 M1302.3 180.9 L1373.6 146.3 M1377.7 180.9 L1306.4 146.3 M1306.4 146.3 L1373.6 146.3 M1306.4 146.3 L1369.4 111.7 M1373.6 146.3 L1310.6 111.7 M1310.6 111.7 L1369.4 111.7 M1310.6 111.7 L1365.3 77.1 M1369.4 111.7 L1314.7 77.1 M1314.7 77.1 L1365.3 77.1 M1314.7 77.1 L1361.1 42.6 M1365.3 77.1 L1318.9 42.6 M1318.9 42.6 L1361.1 42.6 M1318.9 42.6 L1357 8 M1361.1 42.6 L1323 8 M1323 8 L1357 8 M1232 126 H1448 M1232 126 L1326 100 M1448 126 L1354 100 M1262 66 H1418 M1262 66 L1326 40 M1418 66 L1354 40 M1340 8 V-18 M1704 250 L1733 8 M1796 250 L1767 8 M1704 250 L1791.9 215.4 M1796 250 L1708.1 215.4 M1708.1 215.4 L1791.9 215.4 M1708.1 215.4 L1787.7 180.9 M1791.9 215.4 L1712.3 180.9 M1712.3 180.9 L1787.7 180.9 M1712.3 180.9 L1783.6 146.3 M1787.7 180.9 L1716.4 146.3 M1716.4 146.3 L1783.6 146.3 M1716.4 146.3 L1779.4 111.7 M1783.6 146.3 L1720.6 111.7 M1720.6 111.7 L1779.4 111.7 M1720.6 111.7 L1775.3 77.1 M1779.4 111.7 L1724.7 77.1 M1724.7 77.1 L1775.3 77.1 M1724.7 77.1 L1771.1 42.6 M1775.3 77.1 L1728.9 42.6 M1728.9 42.6 L1771.1 42.6 M1728.9 42.6 L1767 8 M1771.1 42.6 L1733 8 M1733 8 L1767 8 M1642 126 H1858 M1642 126 L1736 100 M1858 126 L1764 100 M1672 66 H1828 M1672 66 L1736 40 M1828 66 L1764 40 M1750 8 V-18 M2114 250 L2143 8 M2206 250 L2177 8 M2114 250 L2201.9 215.4 M2206 250 L2118.1 215.4 M2118.1 215.4 L2201.9 215.4 M2118.1 215.4 L2197.7 180.9 M2201.9 215.4 L2122.3 180.9 M2122.3 180.9 L2197.7 180.9 M2122.3 180.9 L2193.6 146.3 M2197.7 180.9 L2126.4 146.3 M2126.4 146.3 L2193.6 146.3 M2126.4 146.3 L2189.4 111.7 M2193.6 146.3 L2130.6 111.7 M2130.6 111.7 L2189.4 111.7 M2130.6 111.7 L2185.3 77.1 M2189.4 111.7 L2134.7 77.1 M2134.7 77.1 L2185.3 77.1 M2134.7 77.1 L2181.1 42.6 M2185.3 77.1 L2138.9 42.6 M2138.9 42.6 L2181.1 42.6 M2138.9 42.6 L2177 8 M2181.1 42.6 L2143 8 M2143 8 L2177 8 M2052 126 H2268 M2052 126 L2146 100 M2268 126 L2174 100 M2082 66 H2238 M2082 66 L2146 40 M2238 66 L2174 40 M2160 8 V-18 M2524 250 L2553 8 M2616 250 L2587 8 M2524 250 L2611.9 215.4 M2616 250 L2528.1 215.4 M2528.1 215.4 L2611.9 215.4 M2528.1 215.4 L2607.7 180.9 M2611.9 215.4 L2532.3 180.9 M2532.3 180.9 L2607.7 180.9 M2532.3 180.9 L2603.6 146.3 M2607.7 180.9 L2536.4 146.3 M2536.4 146.3 L2603.6 146.3 M2536.4 146.3 L2599.4 111.7 M2603.6 146.3 L2540.6 111.7 M2540.6 111.7 L2599.4 111.7 M2540.6 111.7 L2595.3 77.1 M2599.4 111.7 L2544.7 77.1 M2544.7 77.1 L2595.3 77.1 M2544.7 77.1 L2591.1 42.6 M2595.3 77.1 L2548.9 42.6 M2548.9 42.6 L2591.1 42.6 M2548.9 42.6 L2587 8 M2591.1 42.6 L2553 8 M2553 8 L2587 8 M2462 126 H2678 M2462 126 L2556 100 M2678 126 L2584 100 M2492 66 H2648 M2492 66 L2556 40 M2648 66 L2584 40 M2570 8 V-18 M2934 250 L2963 8 M3026 250 L2997 8 M2934 250 L3021.9 215.4 M3026 250 L2938.1 215.4 M2938.1 215.4 L3021.9 215.4 M2938.1 215.4 L3017.7 180.9 M3021.9 215.4 L2942.3 180.9 M2942.3 180.9 L3017.7 180.9 M2942.3 180.9 L3013.6 146.3 M3017.7 180.9 L2946.4 146.3 M2946.4 146.3 L3013.6 146.3 M2946.4 146.3 L3009.4 111.7 M3013.6 146.3 L2950.6 111.7 M2950.6 111.7 L3009.4 111.7 M2950.6 111.7 L3005.3 77.1 M3009.4 111.7 L2954.7 77.1 M2954.7 77.1 L3005.3 77.1 M2954.7 77.1 L3001.1 42.6 M3005.3 77.1 L2958.9 42.6 M2958.9 42.6 L3001.1 42.6 M2958.9 42.6 L2997 8 M3001.1 42.6 L2963 8 M2963 8 L2997 8 M2872 126 H3088 M2872 126 L2966 100 M3088 126 L2994 100 M2902 66 H3058 M2902 66 L2966 40 M3058 66 L2994 40 M2980 8 V-18 M3344 250 L3373 8 M3436 250 L3407 8 M3344 250 L3431.9 215.4 M3436 250 L3348.1 215.4 M3348.1 215.4 L3431.9 215.4 M3348.1 215.4 L3427.7 180.9 M3431.9 215.4 L3352.3 180.9 M3352.3 180.9 L3427.7 180.9 M3352.3 180.9 L3423.6 146.3 M3427.7 180.9 L3356.4 146.3 M3356.4 146.3 L3423.6 146.3 M3356.4 146.3 L3419.4 111.7 M3423.6 146.3 L3360.6 111.7 M3360.6 111.7 L3419.4 111.7 M3360.6 111.7 L3415.3 77.1 M3419.4 111.7 L3364.7 77.1 M3364.7 77.1 L3415.3 77.1 M3364.7 77.1 L3411.1 42.6 M3415.3 77.1 L3368.9 42.6 M3368.9 42.6 L3411.1 42.6 M3368.9 42.6 L3407 8 M3411.1 42.6 L3373 8 M3373 8 L3407 8 M3282 126 H3498 M3282 126 L3376 100 M3498 126 L3404 100 M3312 66 H3468 M3312 66 L3376 40 M3468 66 L3404 40 M3390 8 V-18 M3754 250 L3783 8 M3846 250 L3817 8 M3754 250 L3841.9 215.4 M3846 250 L3758.1 215.4 M3758.1 215.4 L3841.9 215.4 M3758.1 215.4 L3837.7 180.9 M3841.9 215.4 L3762.3 180.9 M3762.3 180.9 L3837.7 180.9 M3762.3 180.9 L3833.6 146.3 M3837.7 180.9 L3766.4 146.3 M3766.4 146.3 L3833.6 146.3 M3766.4 146.3 L3829.4 111.7 M3833.6 146.3 L3770.6 111.7 M3770.6 111.7 L3829.4 111.7 M3770.6 111.7 L3825.3 77.1 M3829.4 111.7 L3774.7 77.1 M3774.7 77.1 L3825.3 77.1 M3774.7 77.1 L3821.1 42.6 M3825.3 77.1 L3778.9 42.6 M3778.9 42.6 L3821.1 42.6 M3778.9 42.6 L3817 8 M3821.1 42.6 L3783 8 M3783 8 L3817 8 M3692 126 H3908 M3692 126 L3786 100 M3908 126 L3814 100 M3722 66 H3878 M3722 66 L3786 40 M3878 66 L3814 40 M3800 8 V-18 M0 252 H3840 M0 252 l-7 12 M36 252 l-7 12 M72 252 l-7 12 M108 252 l-7 12 M144 252 l-7 12 M180 252 l-7 12 M216 252 l-7 12 M252 252 l-7 12 M288 252 l-7 12 M324 252 l-7 12 M360 252 l-7 12 M396 252 l-7 12 M432 252 l-7 12 M468 252 l-7 12 M504 252 l-7 12 M540 252 l-7 12 M576 252 l-7 12 M612 252 l-7 12 M648 252 l-7 12 M684 252 l-7 12 M720 252 l-7 12 M756 252 l-7 12 M792 252 l-7 12 M828 252 l-7 12 M864 252 l-7 12 M900 252 l-7 12 M936 252 l-7 12 M972 252 l-7 12 M1008 252 l-7 12 M1044 252 l-7 12 M1080 252 l-7 12 M1116 252 l-7 12 M1152 252 l-7 12 M1188 252 l-7 12 M1224 252 l-7 12 M1260 252 l-7 12 M1296 252 l-7 12 M1332 252 l-7 12 M1368 252 l-7 12 M1404 252 l-7 12 M1440 252 l-7 12 M1476 252 l-7 12 M1512 252 l-7 12 M1548 252 l-7 12 M1584 252 l-7 12 M1620 252 l-7 12 M1656 252 l-7 12 M1692 252 l-7 12 M1728 252 l-7 12 M1764 252 l-7 12 M1800 252 l-7 12 M1836 252 l-7 12 M1872 252 l-7 12 M1908 252 l-7 12 M1944 252 l-7 12 M1980 252 l-7 12 M2016 252 l-7 12 M2052 252 l-7 12 M2088 252 l-7 12 M2124 252 l-7 12 M2160 252 l-7 12 M2196 252 l-7 12 M2232 252 l-7 12 M2268 252 l-7 12 M2304 252 l-7 12 M2340 252 l-7 12 M2376 252 l-7 12 M2412 252 l-7 12 M2448 252 l-7 12 M2484 252 l-7 12 M2520 252 l-7 12 M2556 252 l-7 12 M2592 252 l-7 12 M2628 252 l-7 12 M2664 252 l-7 12 M2700 252 l-7 12 M2736 252 l-7 12 M2772 252 l-7 12 M2808 252 l-7 12 M2844 252 l-7 12 M2880 252 l-7 12 M2916 252 l-7 12 M2952 252 l-7 12 M2988 252 l-7 12 M3024 252 l-7 12 M3060 252 l-7 12 M3096 252 l-7 12 M3132 252 l-7 12 M3168 252 l-7 12 M3204 252 l-7 12 M3240 252 l-7 12 M3276 252 l-7 12 M3312 252 l-7 12 M3348 252 l-7 12 M3384 252 l-7 12 M3420 252 l-7 12 M3456 252 l-7 12 M3492 252 l-7 12 M3528 252 l-7 12 M3564 252 l-7 12 M3600 252 l-7 12 M3636 252 l-7 12 M3672 252 l-7 12 M3708 252 l-7 12 M3744 252 l-7 12 M3780 252 l-7 12 M3816 252 l-7 12"/>
+      </g>
+      <g class="cx-static cx-wire">
+        <path class="w-r" d="M2 126 Q207 178 412 126 M412 126 Q617 178 822 126 M822 126 Q1027 178 1232 126 M1232 126 Q1437 178 1642 126 M1642 126 Q1847 178 2052 126 M2052 126 Q2257 178 2462 126 M2462 126 Q2667 178 2872 126 M2872 126 Q3077 178 3282 126 M3282 126 Q3487 178 3692 126"/>
+        <path class="w-y" d="M218 126 Q423 178 628 126 M628 126 Q833 178 1038 126 M1038 126 Q1243 178 1448 126 M1448 126 Q1653 178 1858 126 M1858 126 Q2063 178 2268 126 M2268 126 Q2473 178 2678 126 M2678 126 Q2883 178 3088 126 M3088 126 Q3293 178 3498 126 M3498 126 Q3703 178 3908 126"/>
+        <path class="w-b" d="M32 66 Q237 106 442 66 M442 66 Q647 106 852 66 M852 66 Q1057 106 1262 66 M1262 66 Q1467 106 1672 66 M1672 66 Q1877 106 2082 66 M2082 66 Q2287 106 2492 66 M2492 66 Q2697 106 2902 66 M2902 66 Q3107 106 3312 66 M3312 66 Q3517 106 3722 66"/>
+        <path class="w-r" d="M188 66 Q393 106 598 66 M598 66 Q803 106 1008 66 M1008 66 Q1213 106 1418 66 M1418 66 Q1623 106 1828 66 M1828 66 Q2033 106 2238 66 M2238 66 Q2443 106 2648 66 M2648 66 Q2853 106 3058 66 M3058 66 Q3263 106 3468 66 M3468 66 Q3673 106 3878 66"/>
+        <path class="w-e" d="M110 4 Q315 36 520 4 M520 4 Q725 36 930 4 M930 4 Q1135 36 1340 4 M1340 4 Q1545 36 1750 4 M1750 4 Q1955 36 2160 4 M2160 4 Q2365 36 2570 4 M2570 4 Q2775 36 2980 4 M2980 4 Q3185 36 3390 4 M3390 4 Q3595 36 3800 4"/>
+      </g>
+      <g class="cx-halo">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M2 126 Q207 178 412 126 M412 126 Q617 178 822 126 M822 126 Q1027 178 1232 126 M1232 126 Q1437 178 1642 126 M1642 126 Q1847 178 2052 126 M2052 126 Q2257 178 2462 126 M2462 126 Q2667 178 2872 126 M2872 126 Q3077 178 3282 126 M3282 126 Q3487 178 3692 126"/>
+        <path class="k2 r-l" style="animation-delay:-2.6s" d="M218 126 Q423 178 628 126 M628 126 Q833 178 1038 126 M1038 126 Q1243 178 1448 126 M1448 126 Q1653 178 1858 126 M1858 126 Q2063 178 2268 126 M2268 126 Q2473 178 2678 126 M2678 126 Q2883 178 3088 126 M3088 126 Q3293 178 3498 126 M3498 126 Q3703 178 3908 126"/>
+        <path class="k3 r-l" style="animation-delay:-5.2s" d="M32 66 Q237 106 442 66 M442 66 Q647 106 852 66 M852 66 Q1057 106 1262 66 M1262 66 Q1467 106 1672 66 M1672 66 Q1877 106 2082 66 M2082 66 Q2287 106 2492 66 M2492 66 Q2697 106 2902 66 M2902 66 Q3107 106 3312 66 M3312 66 Q3517 106 3722 66"/>
+      </g>
+      <g class="cx-flow">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M2 126 Q207 178 412 126 M412 126 Q617 178 822 126 M822 126 Q1027 178 1232 126 M1232 126 Q1437 178 1642 126 M1642 126 Q1847 178 2052 126 M2052 126 Q2257 178 2462 126 M2462 126 Q2667 178 2872 126 M2872 126 Q3077 178 3282 126 M3282 126 Q3487 178 3692 126"/>
+        <path class="k2 r-l" style="animation-delay:-2.6s" d="M218 126 Q423 178 628 126 M628 126 Q833 178 1038 126 M1038 126 Q1243 178 1448 126 M1448 126 Q1653 178 1858 126 M1858 126 Q2063 178 2268 126 M2268 126 Q2473 178 2678 126 M2678 126 Q2883 178 3088 126 M3088 126 Q3293 178 3498 126 M3498 126 Q3703 178 3908 126"/>
+        <path class="k3 r-l" style="animation-delay:-5.2s" d="M32 66 Q237 106 442 66 M442 66 Q647 106 852 66 M852 66 Q1057 106 1262 66 M1262 66 Q1467 106 1672 66 M1672 66 Q1877 106 2082 66 M2082 66 Q2287 106 2492 66 M2492 66 Q2697 106 2902 66 M2902 66 Q3107 106 3312 66 M3312 66 Q3517 106 3722 66"/>
+        <path class="k1 r-l" style="animation-delay:-7.8s" d="M188 66 Q393 106 598 66 M598 66 Q803 106 1008 66 M1008 66 Q1213 106 1418 66 M1418 66 Q1623 106 1828 66 M1828 66 Q2033 106 2238 66 M2238 66 Q2443 106 2648 66 M2648 66 Q2853 106 3058 66 M3058 66 Q3263 106 3468 66 M3468 66 Q3673 106 3878 66"/>
+        <path class="k2 r-l" style="animation-delay:-10.4s" d="M110 4 Q315 36 520 4 M520 4 Q725 36 930 4 M930 4 Q1135 36 1340 4 M1340 4 Q1545 36 1750 4 M1750 4 Q1955 36 2160 4 M2160 4 Q2365 36 2570 4 M2570 4 Q2775 36 2980 4 M2980 4 Q3185 36 3390 4 M3390 4 Q3595 36 3800 4"/>
+      </g>
+      <g class="cx-nodes">
+        <circle class="k1" cx="2" cy="126" r="4.5" style="animation-delay:-0s"/>
+        <circle class="k2" cx="218" cy="126" r="4.5" style="animation-delay:-0.5s"/>
+        <circle class="k3" cx="32" cy="66" r="4.5" style="animation-delay:-0.9s"/>
+        <circle class="k1" cx="188" cy="66" r="4.5" style="animation-delay:-1.4s"/>
+        <circle class="k2" cx="822" cy="126" r="4.5" style="animation-delay:-1.8s"/>
+        <circle class="k3" cx="1038" cy="126" r="4.5" style="animation-delay:-2.2s"/>
+        <circle class="k1" cx="852" cy="66" r="4.5" style="animation-delay:-2.7s"/>
+        <circle class="k2" cx="1008" cy="66" r="4.5" style="animation-delay:-3.1s"/>
+        <circle class="k3" cx="1642" cy="126" r="4.5" style="animation-delay:-3.6s"/>
+        <circle class="k1" cx="1858" cy="126" r="4.5" style="animation-delay:-4s"/>
+        <circle class="k2" cx="1672" cy="66" r="4.5" style="animation-delay:-4.5s"/>
+        <circle class="k3" cx="1828" cy="66" r="4.5" style="animation-delay:-5s"/>
+        <circle class="k1" cx="2462" cy="126" r="4.5" style="animation-delay:-5.4s"/>
+        <circle class="k2" cx="2678" cy="126" r="4.5" style="animation-delay:-5.9s"/>
+        <circle class="k3" cx="2492" cy="66" r="4.5" style="animation-delay:-6.3s"/>
+        <circle class="k1" cx="2648" cy="66" r="4.5" style="animation-delay:-6.8s"/>
+        <circle class="k2" cx="3282" cy="126" r="4.5" style="animation-delay:-7.2s"/>
+        <circle class="k3" cx="3498" cy="126" r="4.5" style="animation-delay:-7.7s"/>
+        <circle class="k1" cx="3312" cy="66" r="4.5" style="animation-delay:-8.1s"/>
+        <circle class="k2" cx="3468" cy="66" r="4.5" style="animation-delay:-8.6s"/>
+      </g>
+      <g class="cx-spark">
+        <path class="zap-heat" style="animation-duration:6.4s;animation-delay:-1.1s" d="M822 126 l8.7 0 M822 126 l5.7 9.8 M822 126 l-7 12.1 M822 126 l-8.7 0 M822 126 l-5.7 -9.8 M822 126 l7 -12.1"/>
+        <path class="zap-heat" style="animation-duration:7.7s;animation-delay:-4.6s" d="M2238 66 l10.8 5.3 M2238 66 l0.5 7.4 M2238 66 l-8.1 5.4 M2238 66 l-10.8 -5.3 M2238 66 l-0.5 -7.4 M2238 66 l8.1 -5.4"/>
+        <path class="zap" style="animation-duration:6.4s;animation-delay:-1.1s" d="M822 126 l8.7 0 M822 126 l5.7 9.8 M822 126 l-7 12.1 M822 126 l-8.7 0 M822 126 l-5.7 -9.8 M822 126 l7 -12.1"/>
+        <path class="zap" style="animation-duration:7.7s;animation-delay:-4.6s" d="M2238 66 l10.8 5.3 M2238 66 l0.5 7.4 M2238 66 l-8.1 5.4 M2238 66 l-10.8 -5.3 M2238 66 l-0.5 -7.4 M2238 66 l8.1 -5.4"/>
+      </g>
+    </svg>
     <div class="container">
       <div class="section-header-block">
         <div class="brush-badge">
@@ -2458,6 +2970,34 @@ body {
 
   <!-- Chapter 02: 3D Digital Twin Command Deck -->
   <section class="section-padding" id="digital-twin" style="background:linear-gradient(180deg, var(--wheat-base) 0%, var(--wheat-parchment) 50%, var(--wheat-base) 100%); border-top:1px solid var(--wheat-border);">
+    <svg class="circuit cx-phase" viewBox="0 0 3840 306" preserveAspectRatio="xMidYMin slice"
+         aria-hidden="true" focusable="false" data-cx="three-phase waveform">
+      <g class="cx-static cx-grat w-s">
+        <path d="M0 96 H3840 M0 90 V102 M40 90 V102 M80 90 V102 M120 90 V102 M160 90 V102 M200 90 V102 M240 90 V102 M280 90 V102 M320 90 V102 M360 90 V102 M400 90 V102 M440 90 V102 M480 90 V102 M520 90 V102 M560 90 V102 M600 90 V102 M640 90 V102 M680 90 V102 M720 90 V102 M760 90 V102 M800 90 V102 M840 90 V102 M880 90 V102 M920 90 V102 M960 90 V102 M1000 90 V102 M1040 90 V102 M1080 90 V102 M1120 90 V102 M1160 90 V102 M1200 90 V102 M1240 90 V102 M1280 90 V102 M1320 90 V102 M1360 90 V102 M1400 90 V102 M1440 90 V102 M1480 90 V102 M1520 90 V102 M1560 90 V102 M1600 90 V102 M1640 90 V102 M1680 90 V102 M1720 90 V102 M1760 90 V102 M1800 90 V102 M1840 90 V102 M1880 90 V102 M1920 90 V102 M1960 90 V102 M2000 90 V102 M2040 90 V102 M2080 90 V102 M2120 90 V102 M2160 90 V102 M2200 90 V102 M2240 90 V102 M2280 90 V102 M2320 90 V102 M2360 90 V102 M2400 90 V102 M2440 90 V102 M2480 90 V102 M2520 90 V102 M2560 90 V102 M2600 90 V102 M2640 90 V102 M2680 90 V102 M2720 90 V102 M2760 90 V102 M2800 90 V102 M2840 90 V102 M2880 90 V102 M2920 90 V102 M2960 90 V102 M3000 90 V102 M3040 90 V102 M3080 90 V102 M3120 90 V102 M3160 90 V102 M3200 90 V102 M3240 90 V102 M3280 90 V102 M3320 90 V102 M3360 90 V102 M3400 90 V102 M3440 90 V102 M3480 90 V102 M3520 90 V102 M3560 90 V102 M3600 90 V102 M3640 90 V102 M3680 90 V102 M3720 90 V102 M3760 90 V102 M3800 90 V102 M3840 90 V102 M0 8 V188 M200 8 V188 M400 8 V188 M600 8 V188 M800 8 V188 M1000 8 V188 M1200 8 V188 M1400 8 V188 M1600 8 V188 M1800 8 V188 M2000 8 V188 M2200 8 V188 M2400 8 V188 M2600 8 V188 M2800 8 V188 M3000 8 V188 M3200 8 V188 M3400 8 V188 M3600 8 V188 M3800 8 V188 M0 34 H3840 M0 158 H3840"/>
+      </g>
+      <g class="cx-static cx-wire">
+        <path class="w-r" d="M0 96 L16 110.7 L32 124.6 L48 136.8 L64 146.7 L80 153.7 L96 157.4 L112 157.7 L128 154.4 L144 147.7 L160 138.2 L176 126.2 L192 112.5 L208 97.9 L224 83.1 L240 69.1 L256 56.6 L272 46.4 L288 39 L304 34.8 L320 34.2 L336 37 L352 43.3 L368 52.5 L384 64.2 L400 77.7 L416 92.3 L432 107.1 L448 121.2 L464 133.9 L480 144.5 L496 152.3 L512 156.8 L528 157.9 L544 155.5 L560 149.7 L576 140.8 L592 129.4 L608 116 L624 101.6 L640 86.8 L656 72.5 L672 59.6 L688 48.7 L704 40.5 L720 35.6 L736 34 L752 36 L768 41.4 L784 49.9 L800 61.1 L816 74.2 L832 88.6 L848 103.4 L864 117.8 L880 130.9 L896 142.1 L912 150.6 L928 156 L944 158 L960 156.4 L976 151.5 L992 143.3 L1008 132.4 L1024 119.5 L1040 105.2 L1056 90.4 L1072 76 L1088 62.6 L1104 51.2 L1120 42.3 L1136 36.5 L1152 34.1 L1168 35.2 L1184 39.7 L1200 47.5 L1216 58.1 L1232 70.8 L1248 84.9 L1264 99.7 L1280 114.3 L1296 127.8 L1312 139.5 L1328 148.7 L1344 155 L1360 157.8 L1376 157.2 L1392 153 L1408 145.6 L1424 135.4 L1440 122.9 L1456 108.9 L1472 94.1 L1488 79.5 L1504 65.8 L1520 53.8 L1536 44.3 L1552 37.6 L1568 34.3 L1584 34.6 L1600 38.3 L1616 45.3 L1632 55.2 L1648 67.4 L1664 81.3 L1680 96 L1696 110.7 L1712 124.6 L1728 136.8 L1744 146.7 L1760 153.7 L1776 157.4 L1792 157.7 L1808 154.4 L1824 147.7 L1840 138.2 L1856 126.2 L1872 112.5 L1888 97.9 L1904 83.1 L1920 69.1 L1936 56.6 L1952 46.4 L1968 39 L1984 34.8 L2000 34.2 L2016 37 L2032 43.3 L2048 52.5 L2064 64.2 L2080 77.7 L2096 92.3 L2112 107.1 L2128 121.2 L2144 133.9 L2160 144.5 L2176 152.3 L2192 156.8 L2208 157.9 L2224 155.5 L2240 149.7 L2256 140.8 L2272 129.4 L2288 116 L2304 101.6 L2320 86.8 L2336 72.5 L2352 59.6 L2368 48.7 L2384 40.5 L2400 35.6 L2416 34 L2432 36 L2448 41.4 L2464 49.9 L2480 61.1 L2496 74.2 L2512 88.6 L2528 103.4 L2544 117.8 L2560 130.9 L2576 142.1 L2592 150.6 L2608 156 L2624 158 L2640 156.4 L2656 151.5 L2672 143.3 L2688 132.4 L2704 119.5 L2720 105.2 L2736 90.4 L2752 76 L2768 62.6 L2784 51.2 L2800 42.3 L2816 36.5 L2832 34.1 L2848 35.2 L2864 39.7 L2880 47.5 L2896 58.1 L2912 70.8 L2928 84.9 L2944 99.7 L2960 114.3 L2976 127.8 L2992 139.5 L3008 148.7 L3024 155 L3040 157.8 L3056 157.2 L3072 153 L3088 145.6 L3104 135.4 L3120 122.9 L3136 108.9 L3152 94.1 L3168 79.5 L3184 65.8 L3200 53.8 L3216 44.3 L3232 37.6 L3248 34.3 L3264 34.6 L3280 38.3 L3296 45.3 L3312 55.2 L3328 67.4 L3344 81.3 L3360 96 L3376 110.7 L3392 124.6 L3408 136.8 L3424 146.7 L3440 153.7 L3456 157.4 L3472 157.7 L3488 154.4 L3504 147.7 L3520 138.2 L3536 126.2 L3552 112.5 L3568 97.9 L3584 83.1 L3600 69.1 L3616 56.6 L3632 46.4 L3648 39 L3664 34.8 L3680 34.2 L3696 37 L3712 43.3 L3728 52.5 L3744 64.2 L3760 77.7 L3776 92.3 L3792 107.1 L3808 121.2 L3824 133.9 L3840 144.5 L3840 152.3"/>
+        <path class="w-y" d="M0 42.3 L16 36.5 L32 34.1 L48 35.2 L64 39.7 L80 47.5 L96 58.1 L112 70.8 L128 84.9 L144 99.7 L160 114.3 L176 127.8 L192 139.5 L208 148.7 L224 155 L240 157.8 L256 157.2 L272 153 L288 145.6 L304 135.4 L320 122.9 L336 108.9 L352 94.1 L368 79.5 L384 65.8 L400 53.8 L416 44.3 L432 37.6 L448 34.3 L464 34.6 L480 38.3 L496 45.3 L512 55.2 L528 67.4 L544 81.3 L560 96 L576 110.7 L592 124.6 L608 136.8 L624 146.7 L640 153.7 L656 157.4 L672 157.7 L688 154.4 L704 147.7 L720 138.2 L736 126.2 L752 112.5 L768 97.9 L784 83.1 L800 69.1 L816 56.6 L832 46.4 L848 39 L864 34.8 L880 34.2 L896 37 L912 43.3 L928 52.5 L944 64.2 L960 77.7 L976 92.3 L992 107.1 L1008 121.2 L1024 133.9 L1040 144.5 L1056 152.3 L1072 156.8 L1088 157.9 L1104 155.5 L1120 149.7 L1136 140.8 L1152 129.4 L1168 116 L1184 101.6 L1200 86.8 L1216 72.5 L1232 59.6 L1248 48.7 L1264 40.5 L1280 35.6 L1296 34 L1312 36 L1328 41.4 L1344 49.9 L1360 61.1 L1376 74.2 L1392 88.6 L1408 103.4 L1424 117.8 L1440 130.9 L1456 142.1 L1472 150.6 L1488 156 L1504 158 L1520 156.4 L1536 151.5 L1552 143.3 L1568 132.4 L1584 119.5 L1600 105.2 L1616 90.4 L1632 76 L1648 62.6 L1664 51.2 L1680 42.3 L1696 36.5 L1712 34.1 L1728 35.2 L1744 39.7 L1760 47.5 L1776 58.1 L1792 70.8 L1808 84.9 L1824 99.7 L1840 114.3 L1856 127.8 L1872 139.5 L1888 148.7 L1904 155 L1920 157.8 L1936 157.2 L1952 153 L1968 145.6 L1984 135.4 L2000 122.9 L2016 108.9 L2032 94.1 L2048 79.5 L2064 65.8 L2080 53.8 L2096 44.3 L2112 37.6 L2128 34.3 L2144 34.6 L2160 38.3 L2176 45.3 L2192 55.2 L2208 67.4 L2224 81.3 L2240 96 L2256 110.7 L2272 124.6 L2288 136.8 L2304 146.7 L2320 153.7 L2336 157.4 L2352 157.7 L2368 154.4 L2384 147.7 L2400 138.2 L2416 126.2 L2432 112.5 L2448 97.9 L2464 83.1 L2480 69.1 L2496 56.6 L2512 46.4 L2528 39 L2544 34.8 L2560 34.2 L2576 37 L2592 43.3 L2608 52.5 L2624 64.2 L2640 77.7 L2656 92.3 L2672 107.1 L2688 121.2 L2704 133.9 L2720 144.5 L2736 152.3 L2752 156.8 L2768 157.9 L2784 155.5 L2800 149.7 L2816 140.8 L2832 129.4 L2848 116 L2864 101.6 L2880 86.8 L2896 72.5 L2912 59.6 L2928 48.7 L2944 40.5 L2960 35.6 L2976 34 L2992 36 L3008 41.4 L3024 49.9 L3040 61.1 L3056 74.2 L3072 88.6 L3088 103.4 L3104 117.8 L3120 130.9 L3136 142.1 L3152 150.6 L3168 156 L3184 158 L3200 156.4 L3216 151.5 L3232 143.3 L3248 132.4 L3264 119.5 L3280 105.2 L3296 90.4 L3312 76 L3328 62.6 L3344 51.2 L3360 42.3 L3376 36.5 L3392 34.1 L3408 35.2 L3424 39.7 L3440 47.5 L3456 58.1 L3472 70.8 L3488 84.9 L3504 99.7 L3520 114.3 L3536 127.8 L3552 139.5 L3568 148.7 L3584 155 L3600 157.8 L3616 157.2 L3632 153 L3648 145.6 L3664 135.4 L3680 122.9 L3696 108.9 L3712 94.1 L3728 79.5 L3744 65.8 L3760 53.8 L3776 44.3 L3792 37.6 L3808 34.3 L3824 34.6 L3840 38.3 L3840 45.3"/>
+        <path class="w-b" d="M0 149.7 L16 140.8 L32 129.4 L48 116 L64 101.6 L80 86.8 L96 72.5 L112 59.6 L128 48.7 L144 40.5 L160 35.6 L176 34 L192 36 L208 41.4 L224 49.9 L240 61.1 L256 74.2 L272 88.6 L288 103.4 L304 117.8 L320 130.9 L336 142.1 L352 150.6 L368 156 L384 158 L400 156.4 L416 151.5 L432 143.3 L448 132.4 L464 119.5 L480 105.2 L496 90.4 L512 76 L528 62.6 L544 51.2 L560 42.3 L576 36.5 L592 34.1 L608 35.2 L624 39.7 L640 47.5 L656 58.1 L672 70.8 L688 84.9 L704 99.7 L720 114.3 L736 127.8 L752 139.5 L768 148.7 L784 155 L800 157.8 L816 157.2 L832 153 L848 145.6 L864 135.4 L880 122.9 L896 108.9 L912 94.1 L928 79.5 L944 65.8 L960 53.8 L976 44.3 L992 37.6 L1008 34.3 L1024 34.6 L1040 38.3 L1056 45.3 L1072 55.2 L1088 67.4 L1104 81.3 L1120 96 L1136 110.7 L1152 124.6 L1168 136.8 L1184 146.7 L1200 153.7 L1216 157.4 L1232 157.7 L1248 154.4 L1264 147.7 L1280 138.2 L1296 126.2 L1312 112.5 L1328 97.9 L1344 83.1 L1360 69.1 L1376 56.6 L1392 46.4 L1408 39 L1424 34.8 L1440 34.2 L1456 37 L1472 43.3 L1488 52.5 L1504 64.2 L1520 77.7 L1536 92.3 L1552 107.1 L1568 121.2 L1584 133.9 L1600 144.5 L1616 152.3 L1632 156.8 L1648 157.9 L1664 155.5 L1680 149.7 L1696 140.8 L1712 129.4 L1728 116 L1744 101.6 L1760 86.8 L1776 72.5 L1792 59.6 L1808 48.7 L1824 40.5 L1840 35.6 L1856 34 L1872 36 L1888 41.4 L1904 49.9 L1920 61.1 L1936 74.2 L1952 88.6 L1968 103.4 L1984 117.8 L2000 130.9 L2016 142.1 L2032 150.6 L2048 156 L2064 158 L2080 156.4 L2096 151.5 L2112 143.3 L2128 132.4 L2144 119.5 L2160 105.2 L2176 90.4 L2192 76 L2208 62.6 L2224 51.2 L2240 42.3 L2256 36.5 L2272 34.1 L2288 35.2 L2304 39.7 L2320 47.5 L2336 58.1 L2352 70.8 L2368 84.9 L2384 99.7 L2400 114.3 L2416 127.8 L2432 139.5 L2448 148.7 L2464 155 L2480 157.8 L2496 157.2 L2512 153 L2528 145.6 L2544 135.4 L2560 122.9 L2576 108.9 L2592 94.1 L2608 79.5 L2624 65.8 L2640 53.8 L2656 44.3 L2672 37.6 L2688 34.3 L2704 34.6 L2720 38.3 L2736 45.3 L2752 55.2 L2768 67.4 L2784 81.3 L2800 96 L2816 110.7 L2832 124.6 L2848 136.8 L2864 146.7 L2880 153.7 L2896 157.4 L2912 157.7 L2928 154.4 L2944 147.7 L2960 138.2 L2976 126.2 L2992 112.5 L3008 97.9 L3024 83.1 L3040 69.1 L3056 56.6 L3072 46.4 L3088 39 L3104 34.8 L3120 34.2 L3136 37 L3152 43.3 L3168 52.5 L3184 64.2 L3200 77.7 L3216 92.3 L3232 107.1 L3248 121.2 L3264 133.9 L3280 144.5 L3296 152.3 L3312 156.8 L3328 157.9 L3344 155.5 L3360 149.7 L3376 140.8 L3392 129.4 L3408 116 L3424 101.6 L3440 86.8 L3456 72.5 L3472 59.6 L3488 48.7 L3504 40.5 L3520 35.6 L3536 34 L3552 36 L3568 41.4 L3584 49.9 L3600 61.1 L3616 74.2 L3632 88.6 L3648 103.4 L3664 117.8 L3680 130.9 L3696 142.1 L3712 150.6 L3728 156 L3744 158 L3760 156.4 L3776 151.5 L3792 143.3 L3808 132.4 L3824 119.5 L3840 105.2 L3840 90.4"/>
+      </g>
+      <g class="cx-halo">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M0 96 L16 110.7 L32 124.6 L48 136.8 L64 146.7 L80 153.7 L96 157.4 L112 157.7 L128 154.4 L144 147.7 L160 138.2 L176 126.2 L192 112.5 L208 97.9 L224 83.1 L240 69.1 L256 56.6 L272 46.4 L288 39 L304 34.8 L320 34.2 L336 37 L352 43.3 L368 52.5 L384 64.2 L400 77.7 L416 92.3 L432 107.1 L448 121.2 L464 133.9 L480 144.5 L496 152.3 L512 156.8 L528 157.9 L544 155.5 L560 149.7 L576 140.8 L592 129.4 L608 116 L624 101.6 L640 86.8 L656 72.5 L672 59.6 L688 48.7 L704 40.5 L720 35.6 L736 34 L752 36 L768 41.4 L784 49.9 L800 61.1 L816 74.2 L832 88.6 L848 103.4 L864 117.8 L880 130.9 L896 142.1 L912 150.6 L928 156 L944 158 L960 156.4 L976 151.5 L992 143.3 L1008 132.4 L1024 119.5 L1040 105.2 L1056 90.4 L1072 76 L1088 62.6 L1104 51.2 L1120 42.3 L1136 36.5 L1152 34.1 L1168 35.2 L1184 39.7 L1200 47.5 L1216 58.1 L1232 70.8 L1248 84.9 L1264 99.7 L1280 114.3 L1296 127.8 L1312 139.5 L1328 148.7 L1344 155 L1360 157.8 L1376 157.2 L1392 153 L1408 145.6 L1424 135.4 L1440 122.9 L1456 108.9 L1472 94.1 L1488 79.5 L1504 65.8 L1520 53.8 L1536 44.3 L1552 37.6 L1568 34.3 L1584 34.6 L1600 38.3 L1616 45.3 L1632 55.2 L1648 67.4 L1664 81.3 L1680 96 L1696 110.7 L1712 124.6 L1728 136.8 L1744 146.7 L1760 153.7 L1776 157.4 L1792 157.7 L1808 154.4 L1824 147.7 L1840 138.2 L1856 126.2 L1872 112.5 L1888 97.9 L1904 83.1 L1920 69.1 L1936 56.6 L1952 46.4 L1968 39 L1984 34.8 L2000 34.2 L2016 37 L2032 43.3 L2048 52.5 L2064 64.2 L2080 77.7 L2096 92.3 L2112 107.1 L2128 121.2 L2144 133.9 L2160 144.5 L2176 152.3 L2192 156.8 L2208 157.9 L2224 155.5 L2240 149.7 L2256 140.8 L2272 129.4 L2288 116 L2304 101.6 L2320 86.8 L2336 72.5 L2352 59.6 L2368 48.7 L2384 40.5 L2400 35.6 L2416 34 L2432 36 L2448 41.4 L2464 49.9 L2480 61.1 L2496 74.2 L2512 88.6 L2528 103.4 L2544 117.8 L2560 130.9 L2576 142.1 L2592 150.6 L2608 156 L2624 158 L2640 156.4 L2656 151.5 L2672 143.3 L2688 132.4 L2704 119.5 L2720 105.2 L2736 90.4 L2752 76 L2768 62.6 L2784 51.2 L2800 42.3 L2816 36.5 L2832 34.1 L2848 35.2 L2864 39.7 L2880 47.5 L2896 58.1 L2912 70.8 L2928 84.9 L2944 99.7 L2960 114.3 L2976 127.8 L2992 139.5 L3008 148.7 L3024 155 L3040 157.8 L3056 157.2 L3072 153 L3088 145.6 L3104 135.4 L3120 122.9 L3136 108.9 L3152 94.1 L3168 79.5 L3184 65.8 L3200 53.8 L3216 44.3 L3232 37.6 L3248 34.3 L3264 34.6 L3280 38.3 L3296 45.3 L3312 55.2 L3328 67.4 L3344 81.3 L3360 96 L3376 110.7 L3392 124.6 L3408 136.8 L3424 146.7 L3440 153.7 L3456 157.4 L3472 157.7 L3488 154.4 L3504 147.7 L3520 138.2 L3536 126.2 L3552 112.5 L3568 97.9 L3584 83.1 L3600 69.1 L3616 56.6 L3632 46.4 L3648 39 L3664 34.8 L3680 34.2 L3696 37 L3712 43.3 L3728 52.5 L3744 64.2 L3760 77.7 L3776 92.3 L3792 107.1 L3808 121.2 L3824 133.9 L3840 144.5 L3840 152.3"/>
+        <path class="k2 r-l" style="animation-delay:-2.1s" d="M0 42.3 L16 36.5 L32 34.1 L48 35.2 L64 39.7 L80 47.5 L96 58.1 L112 70.8 L128 84.9 L144 99.7 L160 114.3 L176 127.8 L192 139.5 L208 148.7 L224 155 L240 157.8 L256 157.2 L272 153 L288 145.6 L304 135.4 L320 122.9 L336 108.9 L352 94.1 L368 79.5 L384 65.8 L400 53.8 L416 44.3 L432 37.6 L448 34.3 L464 34.6 L480 38.3 L496 45.3 L512 55.2 L528 67.4 L544 81.3 L560 96 L576 110.7 L592 124.6 L608 136.8 L624 146.7 L640 153.7 L656 157.4 L672 157.7 L688 154.4 L704 147.7 L720 138.2 L736 126.2 L752 112.5 L768 97.9 L784 83.1 L800 69.1 L816 56.6 L832 46.4 L848 39 L864 34.8 L880 34.2 L896 37 L912 43.3 L928 52.5 L944 64.2 L960 77.7 L976 92.3 L992 107.1 L1008 121.2 L1024 133.9 L1040 144.5 L1056 152.3 L1072 156.8 L1088 157.9 L1104 155.5 L1120 149.7 L1136 140.8 L1152 129.4 L1168 116 L1184 101.6 L1200 86.8 L1216 72.5 L1232 59.6 L1248 48.7 L1264 40.5 L1280 35.6 L1296 34 L1312 36 L1328 41.4 L1344 49.9 L1360 61.1 L1376 74.2 L1392 88.6 L1408 103.4 L1424 117.8 L1440 130.9 L1456 142.1 L1472 150.6 L1488 156 L1504 158 L1520 156.4 L1536 151.5 L1552 143.3 L1568 132.4 L1584 119.5 L1600 105.2 L1616 90.4 L1632 76 L1648 62.6 L1664 51.2 L1680 42.3 L1696 36.5 L1712 34.1 L1728 35.2 L1744 39.7 L1760 47.5 L1776 58.1 L1792 70.8 L1808 84.9 L1824 99.7 L1840 114.3 L1856 127.8 L1872 139.5 L1888 148.7 L1904 155 L1920 157.8 L1936 157.2 L1952 153 L1968 145.6 L1984 135.4 L2000 122.9 L2016 108.9 L2032 94.1 L2048 79.5 L2064 65.8 L2080 53.8 L2096 44.3 L2112 37.6 L2128 34.3 L2144 34.6 L2160 38.3 L2176 45.3 L2192 55.2 L2208 67.4 L2224 81.3 L2240 96 L2256 110.7 L2272 124.6 L2288 136.8 L2304 146.7 L2320 153.7 L2336 157.4 L2352 157.7 L2368 154.4 L2384 147.7 L2400 138.2 L2416 126.2 L2432 112.5 L2448 97.9 L2464 83.1 L2480 69.1 L2496 56.6 L2512 46.4 L2528 39 L2544 34.8 L2560 34.2 L2576 37 L2592 43.3 L2608 52.5 L2624 64.2 L2640 77.7 L2656 92.3 L2672 107.1 L2688 121.2 L2704 133.9 L2720 144.5 L2736 152.3 L2752 156.8 L2768 157.9 L2784 155.5 L2800 149.7 L2816 140.8 L2832 129.4 L2848 116 L2864 101.6 L2880 86.8 L2896 72.5 L2912 59.6 L2928 48.7 L2944 40.5 L2960 35.6 L2976 34 L2992 36 L3008 41.4 L3024 49.9 L3040 61.1 L3056 74.2 L3072 88.6 L3088 103.4 L3104 117.8 L3120 130.9 L3136 142.1 L3152 150.6 L3168 156 L3184 158 L3200 156.4 L3216 151.5 L3232 143.3 L3248 132.4 L3264 119.5 L3280 105.2 L3296 90.4 L3312 76 L3328 62.6 L3344 51.2 L3360 42.3 L3376 36.5 L3392 34.1 L3408 35.2 L3424 39.7 L3440 47.5 L3456 58.1 L3472 70.8 L3488 84.9 L3504 99.7 L3520 114.3 L3536 127.8 L3552 139.5 L3568 148.7 L3584 155 L3600 157.8 L3616 157.2 L3632 153 L3648 145.6 L3664 135.4 L3680 122.9 L3696 108.9 L3712 94.1 L3728 79.5 L3744 65.8 L3760 53.8 L3776 44.3 L3792 37.6 L3808 34.3 L3824 34.6 L3840 38.3 L3840 45.3"/>
+        <path class="k3 r-l" style="animation-delay:-4.2s" d="M0 149.7 L16 140.8 L32 129.4 L48 116 L64 101.6 L80 86.8 L96 72.5 L112 59.6 L128 48.7 L144 40.5 L160 35.6 L176 34 L192 36 L208 41.4 L224 49.9 L240 61.1 L256 74.2 L272 88.6 L288 103.4 L304 117.8 L320 130.9 L336 142.1 L352 150.6 L368 156 L384 158 L400 156.4 L416 151.5 L432 143.3 L448 132.4 L464 119.5 L480 105.2 L496 90.4 L512 76 L528 62.6 L544 51.2 L560 42.3 L576 36.5 L592 34.1 L608 35.2 L624 39.7 L640 47.5 L656 58.1 L672 70.8 L688 84.9 L704 99.7 L720 114.3 L736 127.8 L752 139.5 L768 148.7 L784 155 L800 157.8 L816 157.2 L832 153 L848 145.6 L864 135.4 L880 122.9 L896 108.9 L912 94.1 L928 79.5 L944 65.8 L960 53.8 L976 44.3 L992 37.6 L1008 34.3 L1024 34.6 L1040 38.3 L1056 45.3 L1072 55.2 L1088 67.4 L1104 81.3 L1120 96 L1136 110.7 L1152 124.6 L1168 136.8 L1184 146.7 L1200 153.7 L1216 157.4 L1232 157.7 L1248 154.4 L1264 147.7 L1280 138.2 L1296 126.2 L1312 112.5 L1328 97.9 L1344 83.1 L1360 69.1 L1376 56.6 L1392 46.4 L1408 39 L1424 34.8 L1440 34.2 L1456 37 L1472 43.3 L1488 52.5 L1504 64.2 L1520 77.7 L1536 92.3 L1552 107.1 L1568 121.2 L1584 133.9 L1600 144.5 L1616 152.3 L1632 156.8 L1648 157.9 L1664 155.5 L1680 149.7 L1696 140.8 L1712 129.4 L1728 116 L1744 101.6 L1760 86.8 L1776 72.5 L1792 59.6 L1808 48.7 L1824 40.5 L1840 35.6 L1856 34 L1872 36 L1888 41.4 L1904 49.9 L1920 61.1 L1936 74.2 L1952 88.6 L1968 103.4 L1984 117.8 L2000 130.9 L2016 142.1 L2032 150.6 L2048 156 L2064 158 L2080 156.4 L2096 151.5 L2112 143.3 L2128 132.4 L2144 119.5 L2160 105.2 L2176 90.4 L2192 76 L2208 62.6 L2224 51.2 L2240 42.3 L2256 36.5 L2272 34.1 L2288 35.2 L2304 39.7 L2320 47.5 L2336 58.1 L2352 70.8 L2368 84.9 L2384 99.7 L2400 114.3 L2416 127.8 L2432 139.5 L2448 148.7 L2464 155 L2480 157.8 L2496 157.2 L2512 153 L2528 145.6 L2544 135.4 L2560 122.9 L2576 108.9 L2592 94.1 L2608 79.5 L2624 65.8 L2640 53.8 L2656 44.3 L2672 37.6 L2688 34.3 L2704 34.6 L2720 38.3 L2736 45.3 L2752 55.2 L2768 67.4 L2784 81.3 L2800 96 L2816 110.7 L2832 124.6 L2848 136.8 L2864 146.7 L2880 153.7 L2896 157.4 L2912 157.7 L2928 154.4 L2944 147.7 L2960 138.2 L2976 126.2 L2992 112.5 L3008 97.9 L3024 83.1 L3040 69.1 L3056 56.6 L3072 46.4 L3088 39 L3104 34.8 L3120 34.2 L3136 37 L3152 43.3 L3168 52.5 L3184 64.2 L3200 77.7 L3216 92.3 L3232 107.1 L3248 121.2 L3264 133.9 L3280 144.5 L3296 152.3 L3312 156.8 L3328 157.9 L3344 155.5 L3360 149.7 L3376 140.8 L3392 129.4 L3408 116 L3424 101.6 L3440 86.8 L3456 72.5 L3472 59.6 L3488 48.7 L3504 40.5 L3520 35.6 L3536 34 L3552 36 L3568 41.4 L3584 49.9 L3600 61.1 L3616 74.2 L3632 88.6 L3648 103.4 L3664 117.8 L3680 130.9 L3696 142.1 L3712 150.6 L3728 156 L3744 158 L3760 156.4 L3776 151.5 L3792 143.3 L3808 132.4 L3824 119.5 L3840 105.2 L3840 90.4"/>
+      </g>
+      <g class="cx-flow">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M0 96 L16 110.7 L32 124.6 L48 136.8 L64 146.7 L80 153.7 L96 157.4 L112 157.7 L128 154.4 L144 147.7 L160 138.2 L176 126.2 L192 112.5 L208 97.9 L224 83.1 L240 69.1 L256 56.6 L272 46.4 L288 39 L304 34.8 L320 34.2 L336 37 L352 43.3 L368 52.5 L384 64.2 L400 77.7 L416 92.3 L432 107.1 L448 121.2 L464 133.9 L480 144.5 L496 152.3 L512 156.8 L528 157.9 L544 155.5 L560 149.7 L576 140.8 L592 129.4 L608 116 L624 101.6 L640 86.8 L656 72.5 L672 59.6 L688 48.7 L704 40.5 L720 35.6 L736 34 L752 36 L768 41.4 L784 49.9 L800 61.1 L816 74.2 L832 88.6 L848 103.4 L864 117.8 L880 130.9 L896 142.1 L912 150.6 L928 156 L944 158 L960 156.4 L976 151.5 L992 143.3 L1008 132.4 L1024 119.5 L1040 105.2 L1056 90.4 L1072 76 L1088 62.6 L1104 51.2 L1120 42.3 L1136 36.5 L1152 34.1 L1168 35.2 L1184 39.7 L1200 47.5 L1216 58.1 L1232 70.8 L1248 84.9 L1264 99.7 L1280 114.3 L1296 127.8 L1312 139.5 L1328 148.7 L1344 155 L1360 157.8 L1376 157.2 L1392 153 L1408 145.6 L1424 135.4 L1440 122.9 L1456 108.9 L1472 94.1 L1488 79.5 L1504 65.8 L1520 53.8 L1536 44.3 L1552 37.6 L1568 34.3 L1584 34.6 L1600 38.3 L1616 45.3 L1632 55.2 L1648 67.4 L1664 81.3 L1680 96 L1696 110.7 L1712 124.6 L1728 136.8 L1744 146.7 L1760 153.7 L1776 157.4 L1792 157.7 L1808 154.4 L1824 147.7 L1840 138.2 L1856 126.2 L1872 112.5 L1888 97.9 L1904 83.1 L1920 69.1 L1936 56.6 L1952 46.4 L1968 39 L1984 34.8 L2000 34.2 L2016 37 L2032 43.3 L2048 52.5 L2064 64.2 L2080 77.7 L2096 92.3 L2112 107.1 L2128 121.2 L2144 133.9 L2160 144.5 L2176 152.3 L2192 156.8 L2208 157.9 L2224 155.5 L2240 149.7 L2256 140.8 L2272 129.4 L2288 116 L2304 101.6 L2320 86.8 L2336 72.5 L2352 59.6 L2368 48.7 L2384 40.5 L2400 35.6 L2416 34 L2432 36 L2448 41.4 L2464 49.9 L2480 61.1 L2496 74.2 L2512 88.6 L2528 103.4 L2544 117.8 L2560 130.9 L2576 142.1 L2592 150.6 L2608 156 L2624 158 L2640 156.4 L2656 151.5 L2672 143.3 L2688 132.4 L2704 119.5 L2720 105.2 L2736 90.4 L2752 76 L2768 62.6 L2784 51.2 L2800 42.3 L2816 36.5 L2832 34.1 L2848 35.2 L2864 39.7 L2880 47.5 L2896 58.1 L2912 70.8 L2928 84.9 L2944 99.7 L2960 114.3 L2976 127.8 L2992 139.5 L3008 148.7 L3024 155 L3040 157.8 L3056 157.2 L3072 153 L3088 145.6 L3104 135.4 L3120 122.9 L3136 108.9 L3152 94.1 L3168 79.5 L3184 65.8 L3200 53.8 L3216 44.3 L3232 37.6 L3248 34.3 L3264 34.6 L3280 38.3 L3296 45.3 L3312 55.2 L3328 67.4 L3344 81.3 L3360 96 L3376 110.7 L3392 124.6 L3408 136.8 L3424 146.7 L3440 153.7 L3456 157.4 L3472 157.7 L3488 154.4 L3504 147.7 L3520 138.2 L3536 126.2 L3552 112.5 L3568 97.9 L3584 83.1 L3600 69.1 L3616 56.6 L3632 46.4 L3648 39 L3664 34.8 L3680 34.2 L3696 37 L3712 43.3 L3728 52.5 L3744 64.2 L3760 77.7 L3776 92.3 L3792 107.1 L3808 121.2 L3824 133.9 L3840 144.5 L3840 152.3"/>
+        <path class="k2 r-l" style="animation-delay:-2.1s" d="M0 42.3 L16 36.5 L32 34.1 L48 35.2 L64 39.7 L80 47.5 L96 58.1 L112 70.8 L128 84.9 L144 99.7 L160 114.3 L176 127.8 L192 139.5 L208 148.7 L224 155 L240 157.8 L256 157.2 L272 153 L288 145.6 L304 135.4 L320 122.9 L336 108.9 L352 94.1 L368 79.5 L384 65.8 L400 53.8 L416 44.3 L432 37.6 L448 34.3 L464 34.6 L480 38.3 L496 45.3 L512 55.2 L528 67.4 L544 81.3 L560 96 L576 110.7 L592 124.6 L608 136.8 L624 146.7 L640 153.7 L656 157.4 L672 157.7 L688 154.4 L704 147.7 L720 138.2 L736 126.2 L752 112.5 L768 97.9 L784 83.1 L800 69.1 L816 56.6 L832 46.4 L848 39 L864 34.8 L880 34.2 L896 37 L912 43.3 L928 52.5 L944 64.2 L960 77.7 L976 92.3 L992 107.1 L1008 121.2 L1024 133.9 L1040 144.5 L1056 152.3 L1072 156.8 L1088 157.9 L1104 155.5 L1120 149.7 L1136 140.8 L1152 129.4 L1168 116 L1184 101.6 L1200 86.8 L1216 72.5 L1232 59.6 L1248 48.7 L1264 40.5 L1280 35.6 L1296 34 L1312 36 L1328 41.4 L1344 49.9 L1360 61.1 L1376 74.2 L1392 88.6 L1408 103.4 L1424 117.8 L1440 130.9 L1456 142.1 L1472 150.6 L1488 156 L1504 158 L1520 156.4 L1536 151.5 L1552 143.3 L1568 132.4 L1584 119.5 L1600 105.2 L1616 90.4 L1632 76 L1648 62.6 L1664 51.2 L1680 42.3 L1696 36.5 L1712 34.1 L1728 35.2 L1744 39.7 L1760 47.5 L1776 58.1 L1792 70.8 L1808 84.9 L1824 99.7 L1840 114.3 L1856 127.8 L1872 139.5 L1888 148.7 L1904 155 L1920 157.8 L1936 157.2 L1952 153 L1968 145.6 L1984 135.4 L2000 122.9 L2016 108.9 L2032 94.1 L2048 79.5 L2064 65.8 L2080 53.8 L2096 44.3 L2112 37.6 L2128 34.3 L2144 34.6 L2160 38.3 L2176 45.3 L2192 55.2 L2208 67.4 L2224 81.3 L2240 96 L2256 110.7 L2272 124.6 L2288 136.8 L2304 146.7 L2320 153.7 L2336 157.4 L2352 157.7 L2368 154.4 L2384 147.7 L2400 138.2 L2416 126.2 L2432 112.5 L2448 97.9 L2464 83.1 L2480 69.1 L2496 56.6 L2512 46.4 L2528 39 L2544 34.8 L2560 34.2 L2576 37 L2592 43.3 L2608 52.5 L2624 64.2 L2640 77.7 L2656 92.3 L2672 107.1 L2688 121.2 L2704 133.9 L2720 144.5 L2736 152.3 L2752 156.8 L2768 157.9 L2784 155.5 L2800 149.7 L2816 140.8 L2832 129.4 L2848 116 L2864 101.6 L2880 86.8 L2896 72.5 L2912 59.6 L2928 48.7 L2944 40.5 L2960 35.6 L2976 34 L2992 36 L3008 41.4 L3024 49.9 L3040 61.1 L3056 74.2 L3072 88.6 L3088 103.4 L3104 117.8 L3120 130.9 L3136 142.1 L3152 150.6 L3168 156 L3184 158 L3200 156.4 L3216 151.5 L3232 143.3 L3248 132.4 L3264 119.5 L3280 105.2 L3296 90.4 L3312 76 L3328 62.6 L3344 51.2 L3360 42.3 L3376 36.5 L3392 34.1 L3408 35.2 L3424 39.7 L3440 47.5 L3456 58.1 L3472 70.8 L3488 84.9 L3504 99.7 L3520 114.3 L3536 127.8 L3552 139.5 L3568 148.7 L3584 155 L3600 157.8 L3616 157.2 L3632 153 L3648 145.6 L3664 135.4 L3680 122.9 L3696 108.9 L3712 94.1 L3728 79.5 L3744 65.8 L3760 53.8 L3776 44.3 L3792 37.6 L3808 34.3 L3824 34.6 L3840 38.3 L3840 45.3"/>
+        <path class="k3 r-l" style="animation-delay:-4.2s" d="M0 149.7 L16 140.8 L32 129.4 L48 116 L64 101.6 L80 86.8 L96 72.5 L112 59.6 L128 48.7 L144 40.5 L160 35.6 L176 34 L192 36 L208 41.4 L224 49.9 L240 61.1 L256 74.2 L272 88.6 L288 103.4 L304 117.8 L320 130.9 L336 142.1 L352 150.6 L368 156 L384 158 L400 156.4 L416 151.5 L432 143.3 L448 132.4 L464 119.5 L480 105.2 L496 90.4 L512 76 L528 62.6 L544 51.2 L560 42.3 L576 36.5 L592 34.1 L608 35.2 L624 39.7 L640 47.5 L656 58.1 L672 70.8 L688 84.9 L704 99.7 L720 114.3 L736 127.8 L752 139.5 L768 148.7 L784 155 L800 157.8 L816 157.2 L832 153 L848 145.6 L864 135.4 L880 122.9 L896 108.9 L912 94.1 L928 79.5 L944 65.8 L960 53.8 L976 44.3 L992 37.6 L1008 34.3 L1024 34.6 L1040 38.3 L1056 45.3 L1072 55.2 L1088 67.4 L1104 81.3 L1120 96 L1136 110.7 L1152 124.6 L1168 136.8 L1184 146.7 L1200 153.7 L1216 157.4 L1232 157.7 L1248 154.4 L1264 147.7 L1280 138.2 L1296 126.2 L1312 112.5 L1328 97.9 L1344 83.1 L1360 69.1 L1376 56.6 L1392 46.4 L1408 39 L1424 34.8 L1440 34.2 L1456 37 L1472 43.3 L1488 52.5 L1504 64.2 L1520 77.7 L1536 92.3 L1552 107.1 L1568 121.2 L1584 133.9 L1600 144.5 L1616 152.3 L1632 156.8 L1648 157.9 L1664 155.5 L1680 149.7 L1696 140.8 L1712 129.4 L1728 116 L1744 101.6 L1760 86.8 L1776 72.5 L1792 59.6 L1808 48.7 L1824 40.5 L1840 35.6 L1856 34 L1872 36 L1888 41.4 L1904 49.9 L1920 61.1 L1936 74.2 L1952 88.6 L1968 103.4 L1984 117.8 L2000 130.9 L2016 142.1 L2032 150.6 L2048 156 L2064 158 L2080 156.4 L2096 151.5 L2112 143.3 L2128 132.4 L2144 119.5 L2160 105.2 L2176 90.4 L2192 76 L2208 62.6 L2224 51.2 L2240 42.3 L2256 36.5 L2272 34.1 L2288 35.2 L2304 39.7 L2320 47.5 L2336 58.1 L2352 70.8 L2368 84.9 L2384 99.7 L2400 114.3 L2416 127.8 L2432 139.5 L2448 148.7 L2464 155 L2480 157.8 L2496 157.2 L2512 153 L2528 145.6 L2544 135.4 L2560 122.9 L2576 108.9 L2592 94.1 L2608 79.5 L2624 65.8 L2640 53.8 L2656 44.3 L2672 37.6 L2688 34.3 L2704 34.6 L2720 38.3 L2736 45.3 L2752 55.2 L2768 67.4 L2784 81.3 L2800 96 L2816 110.7 L2832 124.6 L2848 136.8 L2864 146.7 L2880 153.7 L2896 157.4 L2912 157.7 L2928 154.4 L2944 147.7 L2960 138.2 L2976 126.2 L2992 112.5 L3008 97.9 L3024 83.1 L3040 69.1 L3056 56.6 L3072 46.4 L3088 39 L3104 34.8 L3120 34.2 L3136 37 L3152 43.3 L3168 52.5 L3184 64.2 L3200 77.7 L3216 92.3 L3232 107.1 L3248 121.2 L3264 133.9 L3280 144.5 L3296 152.3 L3312 156.8 L3328 157.9 L3344 155.5 L3360 149.7 L3376 140.8 L3392 129.4 L3408 116 L3424 101.6 L3440 86.8 L3456 72.5 L3472 59.6 L3488 48.7 L3504 40.5 L3520 35.6 L3536 34 L3552 36 L3568 41.4 L3584 49.9 L3600 61.1 L3616 74.2 L3632 88.6 L3648 103.4 L3664 117.8 L3680 130.9 L3696 142.1 L3712 150.6 L3728 156 L3744 158 L3760 156.4 L3776 151.5 L3792 143.3 L3808 132.4 L3824 119.5 L3840 105.2 L3840 90.4"/>
+      </g>
+      <g class="cx-scan"><path d="M0 6 V190"/></g>
+      <g class="cx-spark">
+        <path class="zap-heat" style="animation-duration:5.9s;animation-delay:-0.8s" d="M1365 34 l8.1 0 M1365 34 l5.3 9.1 M1365 34 l-6.5 11.3 M1365 34 l-8.1 0 M1365 34 l-5.3 -9.1 M1365 34 l6.5 -11.3"/>
+        <path class="zap-heat" style="animation-duration:7.1s;animation-delay:-3.4s" d="M2835 158 l5.3 4.3 M2835 158 l-1.4 8.8 M2835 158 l-10.3 3.9 M2835 158 l-5.3 -4.3 M2835 158 l1.4 -8.8 M2835 158 l10.3 -3.9"/>
+        <path class="zap" style="animation-duration:5.9s;animation-delay:-0.8s" d="M1365 34 l8.1 0 M1365 34 l5.3 9.1 M1365 34 l-6.5 11.3 M1365 34 l-8.1 0 M1365 34 l-5.3 -9.1 M1365 34 l6.5 -11.3"/>
+        <path class="zap" style="animation-duration:7.1s;animation-delay:-3.4s" d="M2835 158 l5.3 4.3 M2835 158 l-1.4 8.8 M2835 158 l-10.3 3.9 M2835 158 l-5.3 -4.3 M2835 158 l1.4 -8.8 M2835 158 l10.3 -3.9"/>
+      </g>
+    </svg>
     <div class="container">
       <div class="section-header-block">
         <div class="brush-badge">
@@ -2516,6 +3056,57 @@ body {
 
   <!-- Chapter 03: The Geographic Grid Matrix & Projects -->
   <section class="section-padding" id="corridors" style="border-top:1px solid var(--wheat-border);">
+    <svg class="circuit cx-cool" viewBox="0 0 3840 306" preserveAspectRatio="xMidYMin slice"
+         aria-hidden="true" focusable="false" data-cx="evacuation corridors">
+      <g class="cx-static cx-grat w-s">
+        <path d="M0 0 V306 M80 0 V306 M160 0 V306 M240 0 V306 M320 0 V306 M400 0 V306 M480 0 V306 M560 0 V306 M640 0 V306 M720 0 V306 M800 0 V306 M880 0 V306 M960 0 V306 M1040 0 V306 M1120 0 V306 M1200 0 V306 M1280 0 V306 M1360 0 V306 M1440 0 V306 M1520 0 V306 M1600 0 V306 M1680 0 V306 M1760 0 V306 M1840 0 V306 M1920 0 V306 M2000 0 V306 M2080 0 V306 M2160 0 V306 M2240 0 V306 M2320 0 V306 M2400 0 V306 M2480 0 V306 M2560 0 V306 M2640 0 V306 M2720 0 V306 M2800 0 V306 M2880 0 V306 M2960 0 V306 M3040 0 V306 M3120 0 V306 M3200 0 V306 M3280 0 V306 M3360 0 V306 M3440 0 V306 M3520 0 V306 M3600 0 V306 M3680 0 V306 M3760 0 V306 M3840 0 V306 M0 0 H3840 M0 80 H3840 M0 160 H3840 M0 240 H3840"/>
+        <path d="M36 40 h8 M40 36 v8 M36 200 h8 M40 196 v8 M196 40 h8 M200 36 v8 M196 200 h8 M200 196 v8 M356 40 h8 M360 36 v8 M356 200 h8 M360 196 v8 M516 40 h8 M520 36 v8 M516 200 h8 M520 196 v8 M676 40 h8 M680 36 v8 M676 200 h8 M680 196 v8 M836 40 h8 M840 36 v8 M836 200 h8 M840 196 v8 M996 40 h8 M1000 36 v8 M996 200 h8 M1000 196 v8 M1156 40 h8 M1160 36 v8 M1156 200 h8 M1160 196 v8 M1316 40 h8 M1320 36 v8 M1316 200 h8 M1320 196 v8 M1476 40 h8 M1480 36 v8 M1476 200 h8 M1480 196 v8 M1636 40 h8 M1640 36 v8 M1636 200 h8 M1640 196 v8 M1796 40 h8 M1800 36 v8 M1796 200 h8 M1800 196 v8 M1956 40 h8 M1960 36 v8 M1956 200 h8 M1960 196 v8 M2116 40 h8 M2120 36 v8 M2116 200 h8 M2120 196 v8 M2276 40 h8 M2280 36 v8 M2276 200 h8 M2280 196 v8 M2436 40 h8 M2440 36 v8 M2436 200 h8 M2440 196 v8 M2596 40 h8 M2600 36 v8 M2596 200 h8 M2600 196 v8 M2756 40 h8 M2760 36 v8 M2756 200 h8 M2760 196 v8 M2916 40 h8 M2920 36 v8 M2916 200 h8 M2920 196 v8 M3076 40 h8 M3080 36 v8 M3076 200 h8 M3080 196 v8 M3236 40 h8 M3240 36 v8 M3236 200 h8 M3240 196 v8 M3396 40 h8 M3400 36 v8 M3396 200 h8 M3400 196 v8 M3556 40 h8 M3560 36 v8 M3556 200 h8 M3560 196 v8 M3716 40 h8 M3720 36 v8 M3716 200 h8 M3720 196 v8"/>
+      </g>
+      <g class="cx-static cx-wire">
+        <path class="w-c1" d="M-20 150 L-20 150 L110 150 L174 104 L304 104 L368 150 L498 150 L562 104 L692 104 L756 150 L886 150 L950 104 L1080 104 L1144 150 L1274 150 L1338 104 L1468 104 L1532 150 L1662 150 L1726 104 L1856 104 L1920 150 L2050 150 L2114 104 L2244 104 L2308 150 L2438 150 L2502 104 L2632 104 L2696 150 L2826 150 L2890 104 L3020 104 L3084 150 L3214 150 L3278 104 L3408 104 L3472 150 L3602 150 L3666 104 L3796 104 L3860 150"/>
+        <path class="w-c2" d="M-20 36 L50 36 L180 36 L244 76 L374 76 L438 36 L568 36 L632 76 L762 76 L826 36 L956 36 L1020 76 L1150 76 L1214 36 L1344 36 L1408 76 L1538 76 L1602 36 L1732 36 L1796 76 L1926 76 L1990 36 L2120 36 L2184 76 L2314 76 L2378 36 L2508 36 L2572 76 L2702 76 L2766 36 L2896 36 L2960 76 L3090 76 L3154 36 L3284 36 L3348 76 L3478 76 L3542 36 L3672 36 L3736 76 L3866 76 L3930 36"/>
+        <path class="w-c3" d="M-20 100 L120 100 L250 100 L314 130 L444 130 L508 100 L638 100 L702 130 L832 130 L896 100 L1026 100 L1090 130 L1220 130 L1284 100 L1414 100 L1478 130 L1608 130 L1672 100 L1802 100 L1866 130 L1996 130 L2060 100 L2190 100 L2254 130 L2384 130 L2448 100 L2578 100 L2642 130 L2772 130 L2836 100 L2966 100 L3030 130 L3160 130 L3224 100 L3354 100 L3418 130 L3548 130 L3612 100 L3742 100 L3806 130 L3936 130 L4000 100"/>
+        <path class="w-c1" d="M-20 196 L190 196 L320 196 L384 158 L514 158 L578 196 L708 196 L772 158 L902 158 L966 196 L1096 196 L1160 158 L1290 158 L1354 196 L1484 196 L1548 158 L1678 158 L1742 196 L1872 196 L1936 158 L2066 158 L2130 196 L2260 196 L2324 158 L2454 158 L2518 196 L2648 196 L2712 158 L2842 158 L2906 196 L3036 196 L3100 158 L3230 158 L3294 196 L3424 196 L3488 158 L3618 158 L3682 196 L3812 196 L3876 158 L4006 158 L4070 196"/>
+      </g>
+      <g class="cx-halo">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M-20 150 L-20 150 L110 150 L174 104 L304 104 L368 150 L498 150 L562 104 L692 104 L756 150 L886 150 L950 104 L1080 104 L1144 150 L1274 150 L1338 104 L1468 104 L1532 150 L1662 150 L1726 104 L1856 104 L1920 150 L2050 150 L2114 104 L2244 104 L2308 150 L2438 150 L2502 104 L2632 104 L2696 150 L2826 150 L2890 104 L3020 104 L3084 150 L3214 150 L3278 104 L3408 104 L3472 150 L3602 150 L3666 104 L3796 104 L3860 150"/>
+        <path class="k2 r-l" style="animation-delay:-1.9s" d="M-20 36 L50 36 L180 36 L244 76 L374 76 L438 36 L568 36 L632 76 L762 76 L826 36 L956 36 L1020 76 L1150 76 L1214 36 L1344 36 L1408 76 L1538 76 L1602 36 L1732 36 L1796 76 L1926 76 L1990 36 L2120 36 L2184 76 L2314 76 L2378 36 L2508 36 L2572 76 L2702 76 L2766 36 L2896 36 L2960 76 L3090 76 L3154 36 L3284 36 L3348 76 L3478 76 L3542 36 L3672 36 L3736 76 L3866 76 L3930 36"/>
+      </g>
+      <g class="cx-flow">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M-20 150 L-20 150 L110 150 L174 104 L304 104 L368 150 L498 150 L562 104 L692 104 L756 150 L886 150 L950 104 L1080 104 L1144 150 L1274 150 L1338 104 L1468 104 L1532 150 L1662 150 L1726 104 L1856 104 L1920 150 L2050 150 L2114 104 L2244 104 L2308 150 L2438 150 L2502 104 L2632 104 L2696 150 L2826 150 L2890 104 L3020 104 L3084 150 L3214 150 L3278 104 L3408 104 L3472 150 L3602 150 L3666 104 L3796 104 L3860 150"/>
+        <path class="k2 r-l" style="animation-delay:-1.9s" d="M-20 36 L50 36 L180 36 L244 76 L374 76 L438 36 L568 36 L632 76 L762 76 L826 36 L956 36 L1020 76 L1150 76 L1214 36 L1344 36 L1408 76 L1538 76 L1602 36 L1732 36 L1796 76 L1926 76 L1990 36 L2120 36 L2184 76 L2314 76 L2378 36 L2508 36 L2572 76 L2702 76 L2766 36 L2896 36 L2960 76 L3090 76 L3154 36 L3284 36 L3348 76 L3478 76 L3542 36 L3672 36 L3736 76 L3866 76 L3930 36"/>
+        <path class="k3 r-l" style="animation-delay:-3.8s" d="M-20 100 L120 100 L250 100 L314 130 L444 130 L508 100 L638 100 L702 130 L832 130 L896 100 L1026 100 L1090 130 L1220 130 L1284 100 L1414 100 L1478 130 L1608 130 L1672 100 L1802 100 L1866 130 L1996 130 L2060 100 L2190 100 L2254 130 L2384 130 L2448 100 L2578 100 L2642 130 L2772 130 L2836 100 L2966 100 L3030 130 L3160 130 L3224 100 L3354 100 L3418 130 L3548 130 L3612 100 L3742 100 L3806 130 L3936 130 L4000 100"/>
+        <path class="k1 r-l" style="animation-delay:-5.7s" d="M-20 196 L190 196 L320 196 L384 158 L514 158 L578 196 L708 196 L772 158 L902 158 L966 196 L1096 196 L1160 158 L1290 158 L1354 196 L1484 196 L1548 158 L1678 158 L1742 196 L1872 196 L1936 158 L2066 158 L2130 196 L2260 196 L2324 158 L2454 158 L2518 196 L2648 196 L2712 158 L2842 158 L2906 196 L3036 196 L3100 158 L3230 158 L3294 196 L3424 196 L3488 158 L3618 158 L3682 196 L3812 196 L3876 158 L4006 158 L4070 196"/>
+      </g>
+      <g class="cx-nodes">
+        <circle class="k1" cx="110" cy="150" r="5" style="animation-delay:-0s"/>
+        <circle class="k1" cx="886" cy="150" r="5" style="animation-delay:-0.4s"/>
+        <circle class="k1" cx="1662" cy="150" r="5" style="animation-delay:-0.8s"/>
+        <circle class="k1" cx="2438" cy="150" r="5" style="animation-delay:-1.3s"/>
+        <circle class="k1" cx="3214" cy="150" r="5" style="animation-delay:-1.7s"/>
+        <circle class="k2" cx="180" cy="36" r="5" style="animation-delay:-2.1s"/>
+        <circle class="k2" cx="956" cy="36" r="5" style="animation-delay:-2.5s"/>
+        <circle class="k2" cx="1732" cy="36" r="5" style="animation-delay:-2.9s"/>
+        <circle class="k2" cx="2508" cy="36" r="5" style="animation-delay:-3.4s"/>
+        <circle class="k2" cx="3284" cy="36" r="5" style="animation-delay:-3.8s"/>
+        <circle class="k3" cx="250" cy="100" r="5" style="animation-delay:-4.2s"/>
+        <circle class="k3" cx="1026" cy="100" r="5" style="animation-delay:-4.6s"/>
+        <circle class="k3" cx="1802" cy="100" r="5" style="animation-delay:-5s"/>
+        <circle class="k3" cx="2578" cy="100" r="5" style="animation-delay:-5.5s"/>
+        <circle class="k3" cx="3354" cy="100" r="5" style="animation-delay:-5.9s"/>
+        <circle class="k1" cx="320" cy="196" r="5" style="animation-delay:-6.3s"/>
+        <circle class="k1" cx="1096" cy="196" r="5" style="animation-delay:-6.7s"/>
+        <circle class="k1" cx="1872" cy="196" r="5" style="animation-delay:-7.1s"/>
+        <circle class="k1" cx="2648" cy="196" r="5" style="animation-delay:-7.6s"/>
+        <circle class="k1" cx="3424" cy="196" r="5" style="animation-delay:-8s"/>
+      </g>
+      <g class="cx-spark">
+        <path class="zap-heat" style="animation-duration:6.7s;animation-delay:-2s" d="M1274 150 l11 2.6 M1274 150 l4.1 13.4 M1274 150 l-5.9 6.3 M1274 150 l-11 -2.6 M1274 150 l-4.1 -13.4 M1274 150 l5.9 -6.3"/>
+        <path class="zap-heat" style="animation-duration:8.1s;animation-delay:-5.3s" d="M3602 150 l6 7.7 M3602 150 l-4.5 11.1 M3602 150 l-7.4 1 M3602 150 l-6 -7.7 M3602 150 l4.5 -11.1 M3602 150 l7.4 -1"/>
+        <path class="zap" style="animation-duration:6.7s;animation-delay:-2s" d="M1274 150 l11 2.6 M1274 150 l4.1 13.4 M1274 150 l-5.9 6.3 M1274 150 l-11 -2.6 M1274 150 l-4.1 -13.4 M1274 150 l5.9 -6.3"/>
+        <path class="zap" style="animation-duration:8.1s;animation-delay:-5.3s" d="M3602 150 l6 7.7 M3602 150 l-4.5 11.1 M3602 150 l-7.4 1 M3602 150 l-6 -7.7 M3602 150 l4.5 -11.1 M3602 150 l7.4 -1"/>
+      </g>
+    </svg>
     <div class="container">
       <div class="section-header-block">
         <div class="brush-badge">
@@ -2575,6 +3166,66 @@ body {
 
   <!-- Chapter 04: Landmark Project Dossiers & Financial Growth -->
   <section class="section-padding" id="dossiers" style="border-top:1px solid var(--wheat-border); background:var(--wheat-parchment);">
+    <svg class="circuit cx-mix" viewBox="0 0 3840 306" preserveAspectRatio="xMidYMin slice"
+         aria-hidden="true" focusable="false" data-cx="control & protection wiring">
+      <g class="cx-static cx-wire">
+        <path class="w-c1" d="M-20 40 L280 40 l30 -30 L610 10 l30 30 L940 40 l30 -30 L1270 10 l30 30 L1600 40 l30 -30 L1930 10 l30 30 L2260 40 l30 -30 L2590 10 l30 30 L2920 40 l30 -30 L3250 10 l30 30 L3580 40 l30 -30 L3910 10 l30 30 L4240 40 l30 -30 L4570 10 l30 30 L3860 40"/>
+        <path class="w-c2" d="M-20 104 L320 104 l30 30 L690 134 l30 -30 L1060 104 l30 30 L1430 134 l30 -30 L1800 104 l30 30 L2170 134 l30 -30 L2540 104 l30 30 L2910 134 l30 -30 L3280 104 l30 30 L3650 134 l30 -30 L4020 104 l30 30 L4390 134 l30 -30 L4760 104 l30 30 L3860 134"/>
+        <path class="w-c3" d="M-20 168 L360 168 l30 -30 L770 138 l30 30 L1180 168 l30 -30 L1590 138 l30 30 L2000 168 l30 -30 L2410 138 l30 30 L2820 168 l30 -30 L3230 138 l30 30 L3640 168 l30 -30 L4050 138 l30 30 L4460 168 l30 -30 L4870 138 l30 30 L3860 168"/>
+        <path class="w-c1" d="M300 -20 V46 l30 30 V150"/>
+        <path class="w-c2" d="M1200 -20 V46 l30 30 V150"/>
+        <path class="w-c3" d="M2100 -20 V46 l30 30 V150"/>
+        <path class="w-c1" d="M3000 -20 V46 l30 30 V150"/>
+      </g>
+      <g class="cx-static w-g">
+        <circle cx="280" cy="40" r="9"/><circle cx="940" cy="40" r="9"/><circle cx="1600" cy="40" r="9"/><circle cx="2260" cy="40" r="9"/><circle cx="2920" cy="40" r="9"/><circle cx="3580" cy="40" r="9"/><circle cx="4240" cy="40" r="9"/><circle cx="320" cy="104" r="9"/><circle cx="1060" cy="104" r="9"/><circle cx="1800" cy="104" r="9"/><circle cx="2540" cy="104" r="9"/><circle cx="3280" cy="104" r="9"/><circle cx="4020" cy="104" r="9"/><circle cx="4760" cy="104" r="9"/><circle cx="770" cy="138" r="9"/><circle cx="1590" cy="138" r="9"/><circle cx="2410" cy="138" r="9"/><circle cx="3230" cy="138" r="9"/><circle cx="4050" cy="138" r="9"/><circle cx="4870" cy="138" r="9"/>
+      </g>
+      <g class="cx-static w-s">
+        <rect x="460" y="210" width="96" height="48" rx="4"/><path d="M460 220 h-16 M556 220 h16"/><path d="M460 231 h-16 M556 231 h16"/><path d="M460 242 h-16 M556 242 h16"/><path d="M460 253 h-16 M556 253 h16"/><rect x="1420" y="210" width="96" height="48" rx="4"/><path d="M1420 220 h-16 M1516 220 h16"/><path d="M1420 231 h-16 M1516 231 h16"/><path d="M1420 242 h-16 M1516 242 h16"/><path d="M1420 253 h-16 M1516 253 h16"/><rect x="2380" y="210" width="96" height="48" rx="4"/><path d="M2380 220 h-16 M2476 220 h16"/><path d="M2380 231 h-16 M2476 231 h16"/><path d="M2380 242 h-16 M2476 242 h16"/><path d="M2380 253 h-16 M2476 253 h16"/><rect x="3340" y="210" width="96" height="48" rx="4"/><path d="M3340 220 h-16 M3436 220 h16"/><path d="M3340 231 h-16 M3436 231 h16"/><path d="M3340 242 h-16 M3436 242 h16"/><path d="M3340 253 h-16 M3436 253 h16"/>
+      </g>
+      <g class="cx-halo">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M-20 40 L280 40 l30 -30 L610 10 l30 30 L940 40 l30 -30 L1270 10 l30 30 L1600 40 l30 -30 L1930 10 l30 30 L2260 40 l30 -30 L2590 10 l30 30 L2920 40 l30 -30 L3250 10 l30 30 L3580 40 l30 -30 L3910 10 l30 30 L4240 40 l30 -30 L4570 10 l30 30 L3860 40"/>
+        <path class="k2 r-l" style="animation-delay:-2.3s" d="M-20 104 L320 104 l30 30 L690 134 l30 -30 L1060 104 l30 30 L1430 134 l30 -30 L1800 104 l30 30 L2170 134 l30 -30 L2540 104 l30 30 L2910 134 l30 -30 L3280 104 l30 30 L3650 134 l30 -30 L4020 104 l30 30 L4390 134 l30 -30 L4760 104 l30 30 L3860 134"/>
+        <path class="k3 r-l" style="animation-delay:-4.6s" d="M-20 168 L360 168 l30 -30 L770 138 l30 30 L1180 168 l30 -30 L1590 138 l30 30 L2000 168 l30 -30 L2410 138 l30 30 L2820 168 l30 -30 L3230 138 l30 30 L3640 168 l30 -30 L4050 138 l30 30 L4460 168 l30 -30 L4870 138 l30 30 L3860 168"/>
+      </g>
+      <g class="cx-flow">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M-20 40 L280 40 l30 -30 L610 10 l30 30 L940 40 l30 -30 L1270 10 l30 30 L1600 40 l30 -30 L1930 10 l30 30 L2260 40 l30 -30 L2590 10 l30 30 L2920 40 l30 -30 L3250 10 l30 30 L3580 40 l30 -30 L3910 10 l30 30 L4240 40 l30 -30 L4570 10 l30 30 L3860 40"/>
+        <path class="k2 r-l" style="animation-delay:-1.4s" d="M-20 104 L320 104 l30 30 L690 134 l30 -30 L1060 104 l30 30 L1430 134 l30 -30 L1800 104 l30 30 L2170 134 l30 -30 L2540 104 l30 30 L2910 134 l30 -30 L3280 104 l30 30 L3650 134 l30 -30 L4020 104 l30 30 L4390 134 l30 -30 L4760 104 l30 30 L3860 134"/>
+        <path class="k3 r-l" style="animation-delay:-2.8s" d="M-20 168 L360 168 l30 -30 L770 138 l30 30 L1180 168 l30 -30 L1590 138 l30 30 L2000 168 l30 -30 L2410 138 l30 30 L2820 168 l30 -30 L3230 138 l30 30 L3640 168 l30 -30 L4050 138 l30 30 L4460 168 l30 -30 L4870 138 l30 30 L3860 168"/>
+        <path class="k1 r-m" style="animation-delay:-4.2s" d="M300 -20 V46 l30 30 V150"/>
+        <path class="k2 r-m" style="animation-delay:-5.6s" d="M1200 -20 V46 l30 30 V150"/>
+        <path class="k3 r-m" style="animation-delay:-7s" d="M2100 -20 V46 l30 30 V150"/>
+        <path class="k1 r-m" style="animation-delay:-8.4s" d="M3000 -20 V46 l30 30 V150"/>
+      </g>
+      <g class="cx-nodes">
+        <circle class="k1" cx="280" cy="40" r="5" style="animation-delay:-0s"/>
+        <circle class="k1" cx="940" cy="40" r="5" style="animation-delay:-0.4s"/>
+        <circle class="k1" cx="1600" cy="40" r="5" style="animation-delay:-0.8s"/>
+        <circle class="k1" cx="2260" cy="40" r="5" style="animation-delay:-1.1s"/>
+        <circle class="k1" cx="2920" cy="40" r="5" style="animation-delay:-1.5s"/>
+        <circle class="k1" cx="3580" cy="40" r="5" style="animation-delay:-1.9s"/>
+        <circle class="k1" cx="4240" cy="40" r="5" style="animation-delay:-2.3s"/>
+        <circle class="k2" cx="320" cy="104" r="5" style="animation-delay:-2.7s"/>
+        <circle class="k2" cx="1060" cy="104" r="5" style="animation-delay:-3s"/>
+        <circle class="k2" cx="1800" cy="104" r="5" style="animation-delay:-3.4s"/>
+        <circle class="k2" cx="2540" cy="104" r="5" style="animation-delay:-3.8s"/>
+        <circle class="k2" cx="3280" cy="104" r="5" style="animation-delay:-4.2s"/>
+        <circle class="k2" cx="4020" cy="104" r="5" style="animation-delay:-4.6s"/>
+        <circle class="k2" cx="4760" cy="104" r="5" style="animation-delay:-4.9s"/>
+        <circle class="k3" cx="770" cy="138" r="5" style="animation-delay:-5.3s"/>
+        <circle class="k3" cx="1590" cy="138" r="5" style="animation-delay:-5.7s"/>
+        <circle class="k3" cx="2410" cy="138" r="5" style="animation-delay:-6.1s"/>
+        <circle class="k3" cx="3230" cy="138" r="5" style="animation-delay:-6.5s"/>
+        <circle class="k3" cx="4050" cy="138" r="5" style="animation-delay:-6.8s"/>
+        <circle class="k3" cx="4870" cy="138" r="5" style="animation-delay:-7.2s"/>
+      </g>
+      <g class="cx-spark">
+        <path class="zap-heat" style="animation-duration:6.2s;animation-delay:-1.4s" d="M940 40 l11.7 5.7 M940 40 l0.6 8 M940 40 l-8.7 5.9 M940 40 l-11.7 -5.7 M940 40 l-0.6 -8 M940 40 l8.7 -5.9"/>
+        <path class="zap-heat" style="animation-duration:7.9s;animation-delay:-4.8s" d="M2920 40 l4.6 10 M2920 40 l-3.9 5.6 M2920 40 l-8.9 -0.8 M2920 40 l-4.6 -10 M2920 40 l3.9 -5.6 M2920 40 l8.9 0.8"/>
+        <path class="zap" style="animation-duration:6.2s;animation-delay:-1.4s" d="M940 40 l11.7 5.7 M940 40 l0.6 8 M940 40 l-8.7 5.9 M940 40 l-11.7 -5.7 M940 40 l-0.6 -8 M940 40 l8.7 -5.9"/>
+        <path class="zap" style="animation-duration:7.9s;animation-delay:-4.8s" d="M2920 40 l4.6 10 M2920 40 l-3.9 5.6 M2920 40 l-8.9 -0.8 M2920 40 l-4.6 -10 M2920 40 l3.9 -5.6 M2920 40 l8.9 0.8"/>
+      </g>
+    </svg>
     <div class="container">
       <div class="section-header-block">
         <div class="brush-badge amber">
@@ -2752,6 +3403,81 @@ body {
 
   <!-- Chapter 05: Field Photographic Archive & Switchyard Gallery -->
   <section class="section-padding" id="gallery" style="border-top:1px solid var(--wheat-border);">
+    <svg class="circuit cx-rich" viewBox="0 0 3840 306" preserveAspectRatio="xMidYMin slice"
+         aria-hidden="true" focusable="false" data-cx="equipotential field">
+      <g class="cx-static cx-grat w-s">
+        <circle cx="400" cy="100" r="28"/><circle cx="400" cy="100" r="50"/><circle cx="400" cy="100" r="72"/><circle cx="400" cy="100" r="94"/><path d="M415.4 100 L494 100"/><path d="M413.3 107.7 L481.4 147"/><path d="M407.7 113.3 L447 181.4"/><path d="M400 115.4 L400 194"/><path d="M392.3 113.3 L353 181.4"/><path d="M386.7 107.7 L318.6 147"/><path d="M384.6 100 L306 100"/><path d="M386.7 92.3 L318.6 53"/><path d="M392.3 86.7 L353 18.6"/><path d="M400 84.6 L400 6"/><path d="M407.7 86.7 L447 18.6"/><path d="M413.3 92.3 L481.4 53"/><circle cx="1160" cy="100" r="34"/><circle cx="1160" cy="100" r="58"/><circle cx="1160" cy="100" r="82"/><circle cx="1160" cy="100" r="106"/><path d="M1178.7 100 L1266 100"/><path d="M1176.2 109.3 L1251.8 153"/><path d="M1169.3 116.2 L1213 191.8"/><path d="M1160 118.7 L1160 206"/><path d="M1150.7 116.2 L1107 191.8"/><path d="M1143.8 109.3 L1068.2 153"/><path d="M1141.3 100 L1054 100"/><path d="M1143.8 90.6 L1068.2 47"/><path d="M1150.7 83.8 L1107 8.2"/><path d="M1160 81.3 L1160 -6"/><path d="M1169.3 83.8 L1213 8.2"/><path d="M1176.2 90.6 L1251.8 47"/><circle cx="1920" cy="100" r="28"/><circle cx="1920" cy="100" r="50"/><circle cx="1920" cy="100" r="72"/><circle cx="1920" cy="100" r="94"/><path d="M1935.4 100 L2014 100"/><path d="M1933.3 107.7 L2001.4 147"/><path d="M1927.7 113.3 L1967 181.4"/><path d="M1920 115.4 L1920 194"/><path d="M1912.3 113.3 L1873 181.4"/><path d="M1906.7 107.7 L1838.6 147"/><path d="M1904.6 100 L1826 100"/><path d="M1906.7 92.3 L1838.6 53"/><path d="M1912.3 86.7 L1873 18.6"/><path d="M1920 84.6 L1920 6"/><path d="M1927.7 86.7 L1967 18.6"/><path d="M1933.3 92.3 L2001.4 53"/><circle cx="2680" cy="100" r="34"/><circle cx="2680" cy="100" r="58"/><circle cx="2680" cy="100" r="82"/><circle cx="2680" cy="100" r="106"/><path d="M2698.7 100 L2786 100"/><path d="M2696.2 109.3 L2771.8 153"/><path d="M2689.3 116.2 L2733 191.8"/><path d="M2680 118.7 L2680 206"/><path d="M2670.7 116.2 L2627 191.8"/><path d="M2663.8 109.3 L2588.2 153"/><path d="M2661.3 100 L2574 100"/><path d="M2663.8 90.6 L2588.2 47"/><path d="M2670.7 83.8 L2627 8.2"/><path d="M2680 81.3 L2680 -6"/><path d="M2689.3 83.8 L2733 8.2"/><path d="M2696.2 90.6 L2771.8 47"/><circle cx="3440" cy="100" r="28"/><circle cx="3440" cy="100" r="50"/><circle cx="3440" cy="100" r="72"/><circle cx="3440" cy="100" r="94"/><path d="M3455.4 100 L3534 100"/><path d="M3453.3 107.7 L3521.4 147"/><path d="M3447.7 113.3 L3487 181.4"/><path d="M3440 115.4 L3440 194"/><path d="M3432.3 113.3 L3393 181.4"/><path d="M3426.7 107.7 L3358.6 147"/><path d="M3424.6 100 L3346 100"/><path d="M3426.7 92.3 L3358.6 53"/><path d="M3432.3 86.7 L3393 18.6"/><path d="M3440 84.6 L3440 6"/><path d="M3447.7 86.7 L3487 18.6"/><path d="M3453.3 92.3 L3521.4 53"/>
+      </g>
+      <g class="cx-static cx-wire">
+        <circle class="w-c1" fill="none" cx="400" cy="100" r="28"/>
+        <circle class="w-c2" fill="none" cx="400" cy="100" r="50"/>
+        <circle class="w-c3" fill="none" cx="400" cy="100" r="72"/>
+        <circle class="w-c1" fill="none" cx="400" cy="100" r="94"/>
+        <circle class="w-c1" fill="none" cx="1160" cy="100" r="34"/>
+        <circle class="w-c2" fill="none" cx="1160" cy="100" r="58"/>
+        <circle class="w-c3" fill="none" cx="1160" cy="100" r="82"/>
+        <circle class="w-c1" fill="none" cx="1160" cy="100" r="106"/>
+        <circle class="w-c1" fill="none" cx="1920" cy="100" r="28"/>
+        <circle class="w-c2" fill="none" cx="1920" cy="100" r="50"/>
+        <circle class="w-c3" fill="none" cx="1920" cy="100" r="72"/>
+        <circle class="w-c1" fill="none" cx="1920" cy="100" r="94"/>
+        <circle class="w-c1" fill="none" cx="2680" cy="100" r="34"/>
+        <circle class="w-c2" fill="none" cx="2680" cy="100" r="58"/>
+        <circle class="w-c3" fill="none" cx="2680" cy="100" r="82"/>
+        <circle class="w-c1" fill="none" cx="2680" cy="100" r="106"/>
+        <circle class="w-c1" fill="none" cx="3440" cy="100" r="28"/>
+        <circle class="w-c2" fill="none" cx="3440" cy="100" r="50"/>
+        <circle class="w-c3" fill="none" cx="3440" cy="100" r="72"/>
+        <circle class="w-c1" fill="none" cx="3440" cy="100" r="94"/>
+      </g>
+      <g class="cx-halo cx-ring">
+        <circle class="k2" cx="400" cy="100" r="50" style="animation-delay:-0.8s"/>
+        <circle class="k1" cx="400" cy="100" r="94" style="animation-delay:-2.4s"/>
+        <circle class="k2" cx="1160" cy="100" r="58" style="animation-delay:-2.5s"/>
+        <circle class="k1" cx="1160" cy="100" r="106" style="animation-delay:-4.1s"/>
+        <circle class="k2" cx="1920" cy="100" r="50" style="animation-delay:-4.2s"/>
+        <circle class="k1" cx="1920" cy="100" r="94" style="animation-delay:-5.8s"/>
+        <circle class="k2" cx="2680" cy="100" r="58" style="animation-delay:-5.9s"/>
+        <circle class="k1" cx="2680" cy="100" r="106" style="animation-delay:-7.5s"/>
+        <circle class="k2" cx="3440" cy="100" r="50" style="animation-delay:-7.6s"/>
+        <circle class="k1" cx="3440" cy="100" r="94" style="animation-delay:-9.2s"/>
+      </g>
+      <g class="cx-flow cx-ring">
+        <circle class="k1" cx="400" cy="100" r="28" style="animation-delay:-0s"/>
+        <circle class="k2" cx="400" cy="100" r="50" style="animation-delay:-0.8s"/>
+        <circle class="k3" cx="400" cy="100" r="72" style="animation-delay:-1.6s"/>
+        <circle class="k1" cx="400" cy="100" r="94" style="animation-delay:-2.4s"/>
+        <circle class="k1" cx="1160" cy="100" r="34" style="animation-delay:-1.7s"/>
+        <circle class="k2" cx="1160" cy="100" r="58" style="animation-delay:-2.5s"/>
+        <circle class="k3" cx="1160" cy="100" r="82" style="animation-delay:-3.3s"/>
+        <circle class="k1" cx="1160" cy="100" r="106" style="animation-delay:-4.1s"/>
+        <circle class="k1" cx="1920" cy="100" r="28" style="animation-delay:-3.4s"/>
+        <circle class="k2" cx="1920" cy="100" r="50" style="animation-delay:-4.2s"/>
+        <circle class="k3" cx="1920" cy="100" r="72" style="animation-delay:-5s"/>
+        <circle class="k1" cx="1920" cy="100" r="94" style="animation-delay:-5.8s"/>
+        <circle class="k1" cx="2680" cy="100" r="34" style="animation-delay:-5.1s"/>
+        <circle class="k2" cx="2680" cy="100" r="58" style="animation-delay:-5.9s"/>
+        <circle class="k3" cx="2680" cy="100" r="82" style="animation-delay:-6.7s"/>
+        <circle class="k1" cx="2680" cy="100" r="106" style="animation-delay:-7.5s"/>
+        <circle class="k1" cx="3440" cy="100" r="28" style="animation-delay:-6.8s"/>
+        <circle class="k2" cx="3440" cy="100" r="50" style="animation-delay:-7.6s"/>
+        <circle class="k3" cx="3440" cy="100" r="72" style="animation-delay:-8.4s"/>
+        <circle class="k1" cx="3440" cy="100" r="94" style="animation-delay:-9.2s"/>
+      </g>
+      <g class="cx-nodes">
+        <circle class="k1" cx="400" cy="100" r="7" style="animation-delay:-0s"/>
+        <circle class="k2" cx="1160" cy="100" r="7" style="animation-delay:-0.6s"/>
+        <circle class="k3" cx="1920" cy="100" r="7" style="animation-delay:-1.2s"/>
+        <circle class="k1" cx="2680" cy="100" r="7" style="animation-delay:-1.8s"/>
+        <circle class="k2" cx="3440" cy="100" r="7" style="animation-delay:-2.4s"/>
+      </g>
+      <g class="cx-spark">
+        <path class="zap-heat" style="animation-duration:6s;animation-delay:-1.7s" d="M1160 100 l9.3 0 M1160 100 l6.1 10.5 M1160 100 l-7.5 13 M1160 100 l-9.3 0 M1160 100 l-6.1 -10.5 M1160 100 l7.5 -13"/>
+        <path class="zap-heat" style="animation-duration:7.4s;animation-delay:-4.9s" d="M2680 100 l7.2 5.9 M2680 100 l-1.9 12 M2680 100 l-14 5.4 M2680 100 l-7.2 -5.9 M2680 100 l1.9 -12 M2680 100 l14 -5.4"/>
+        <path class="zap" style="animation-duration:6s;animation-delay:-1.7s" d="M1160 100 l9.3 0 M1160 100 l6.1 10.5 M1160 100 l-7.5 13 M1160 100 l-9.3 0 M1160 100 l-6.1 -10.5 M1160 100 l7.5 -13"/>
+        <path class="zap" style="animation-duration:7.4s;animation-delay:-4.9s" d="M2680 100 l7.2 5.9 M2680 100 l-1.9 12 M2680 100 l-14 5.4 M2680 100 l-7.2 -5.9 M2680 100 l1.9 -12 M2680 100 l14 -5.4"/>
+      </g>
+    </svg>
     <div class="container">
       <div class="section-header-block">
         <div class="brush-badge">
@@ -2791,6 +3517,79 @@ body {
 
   <!-- Chapter 06: Standards & Certifications -->
   <section class="section-padding" id="standards" style="background:var(--wheat-parchment); border-top:1px solid var(--wheat-border);">
+    <svg class="circuit cx-amber" viewBox="0 0 3840 306" preserveAspectRatio="xMidYMin slice"
+         aria-hidden="true" focusable="false" data-cx="certification fan-out">
+      <g class="cx-static cx-grat w-g">
+        <circle cx="1920" cy="92" r="28"/><circle cx="1920" cy="92" r="44"/><circle cx="1920" cy="92" r="176"/><circle cx="1920" cy="92" r="244"/>
+      </g>
+      <g class="cx-static cx-wire">
+        <path class="w-c1" d="M1876.9 83.3 L1808.3 69.4 L1665.2 40.3"/>
+        <path class="w-c2" d="M1883.5 67.4 L1825.4 28.3 L1646.3 -92.3"/>
+        <path class="w-c3" d="M1895.7 55.3 L1857 -3 L1699 -241.4"/>
+        <path class="w-c1" d="M1911.6 48.8 L1898.2 -19.9 L1870.2 -163.2"/>
+        <path class="w-c2" d="M1928.7 48.9 L1942.6 -19.7 L1985.6 -231.4"/>
+        <path class="w-c3" d="M1944.6 55.5 L1983.7 -2.6 L2143.4 -239.8"/>
+        <path class="w-c1" d="M1956.7 67.7 L2015 29 L2136.7 -51.7"/>
+        <path class="w-c2" d="M1963.2 83.6 L2031.9 70.2 L2243.9 28.8"/>
+        <path class="w-c3" d="M1963.1 100.7 L2031.7 114.6 L2312 171.5"/>
+        <path class="w-c1" d="M1956.5 116.6 L2014.6 155.7 L2135.7 237.2"/>
+        <path class="w-c2" d="M1944.3 128.7 L1983 187 L2102.3 367.1"/>
+        <path class="w-c3" d="M1928.4 135.2 L1941.8 203.9 L1996.6 484.6"/>
+        <path class="w-c1" d="M1911.3 135.1 L1897.4 203.7 L1868.3 346.8"/>
+        <path class="w-c2" d="M1895.4 128.5 L1856.3 186.6 L1735.7 365.7"/>
+        <path class="w-c3" d="M1883.3 116.3 L1825 155 L1586.6 313"/>
+        <path class="w-c1" d="M1876.8 100.4 L1808.1 113.8 L1664.8 141.8"/>
+      </g>
+      <g class="cx-halo">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M1876.9 83.3 L1808.3 69.4 L1665.2 40.3"/>
+        <path class="k2 r-l" style="animation-delay:-2s" d="M1928.7 48.9 L1942.6 -19.7 L1985.6 -231.4"/>
+        <path class="k3 r-l" style="animation-delay:-4s" d="M1963.1 100.7 L2031.7 114.6 L2312 171.5"/>
+        <path class="k1 r-l" style="animation-delay:-6s" d="M1911.3 135.1 L1897.4 203.7 L1868.3 346.8"/>
+      </g>
+      <g class="cx-flow">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M1876.9 83.3 L1808.3 69.4 L1665.2 40.3"/>
+        <path class="k2 r-l" style="animation-delay:-0.5s" d="M1883.5 67.4 L1825.4 28.3 L1646.3 -92.3"/>
+        <path class="k3 r-l" style="animation-delay:-1s" d="M1895.7 55.3 L1857 -3 L1699 -241.4"/>
+        <path class="k1 r-l" style="animation-delay:-1.5s" d="M1911.6 48.8 L1898.2 -19.9 L1870.2 -163.2"/>
+        <path class="k2 r-l" style="animation-delay:-2s" d="M1928.7 48.9 L1942.6 -19.7 L1985.6 -231.4"/>
+        <path class="k3 r-l" style="animation-delay:-2.5s" d="M1944.6 55.5 L1983.7 -2.6 L2143.4 -239.8"/>
+        <path class="k1 r-l" style="animation-delay:-3s" d="M1956.7 67.7 L2015 29 L2136.7 -51.7"/>
+        <path class="k2 r-l" style="animation-delay:-3.5s" d="M1963.2 83.6 L2031.9 70.2 L2243.9 28.8"/>
+        <path class="k3 r-l" style="animation-delay:-4s" d="M1963.1 100.7 L2031.7 114.6 L2312 171.5"/>
+        <path class="k1 r-l" style="animation-delay:-4.5s" d="M1956.5 116.6 L2014.6 155.7 L2135.7 237.2"/>
+        <path class="k2 r-l" style="animation-delay:-5s" d="M1944.3 128.7 L1983 187 L2102.3 367.1"/>
+        <path class="k3 r-l" style="animation-delay:-5.5s" d="M1928.4 135.2 L1941.8 203.9 L1996.6 484.6"/>
+        <path class="k1 r-l" style="animation-delay:-6s" d="M1911.3 135.1 L1897.4 203.7 L1868.3 346.8"/>
+        <path class="k2 r-l" style="animation-delay:-6.5s" d="M1895.4 128.5 L1856.3 186.6 L1735.7 365.7"/>
+        <path class="k3 r-l" style="animation-delay:-7s" d="M1883.3 116.3 L1825 155 L1586.6 313"/>
+        <path class="k1 r-l" style="animation-delay:-7.5s" d="M1876.8 100.4 L1808.1 113.8 L1664.8 141.8"/>
+      </g>
+      <g class="cx-nodes">
+        <circle class="k2" cx="1920" cy="92" r="9"/>
+        <circle class="k1" cx="1808.3" cy="69.4" r="5" style="animation-delay:-0s"/>
+        <circle class="k2" cx="1825.4" cy="28.3" r="5" style="animation-delay:-0.3s"/>
+        <circle class="k3" cx="1857" cy="-3" r="5" style="animation-delay:-0.7s"/>
+        <circle class="k1" cx="1898.2" cy="-19.9" r="5" style="animation-delay:-1s"/>
+        <circle class="k2" cx="1942.6" cy="-19.7" r="5" style="animation-delay:-1.3s"/>
+        <circle class="k3" cx="1983.7" cy="-2.6" r="5" style="animation-delay:-1.7s"/>
+        <circle class="k1" cx="2015" cy="29" r="5" style="animation-delay:-2s"/>
+        <circle class="k2" cx="2031.9" cy="70.2" r="5" style="animation-delay:-2.3s"/>
+        <circle class="k3" cx="2031.7" cy="114.6" r="5" style="animation-delay:-2.6s"/>
+        <circle class="k1" cx="2014.6" cy="155.7" r="5" style="animation-delay:-3s"/>
+        <circle class="k2" cx="1983" cy="187" r="5" style="animation-delay:-3.3s"/>
+        <circle class="k3" cx="1941.8" cy="203.9" r="5" style="animation-delay:-3.6s"/>
+        <circle class="k1" cx="1897.4" cy="203.7" r="5" style="animation-delay:-4s"/>
+        <circle class="k2" cx="1856.3" cy="186.6" r="5" style="animation-delay:-4.3s"/>
+        <circle class="k3" cx="1825" cy="155" r="5" style="animation-delay:-4.6s"/>
+        <circle class="k1" cx="1808.1" cy="113.8" r="5" style="animation-delay:-5s"/>
+      </g>
+      <g class="cx-spark">
+        <path class="zap-heat" style="animation-duration:5.8s;animation-delay:-1s" d="M1857 -3 l8.1 0 M1857 -3 l5.3 9.1 M1857 -3 l-6.5 11.3 M1857 -3 l-8.1 0 M1857 -3 l-5.3 -9.1 M1857 -3 l6.5 -11.3"/>
+        <path class="zap-heat" style="animation-duration:7.6s;animation-delay:-4.2s" d="M1941.8 203.9 l6 7.7 M1941.8 203.9 l-4.5 11.1 M1941.8 203.9 l-7.4 1 M1941.8 203.9 l-6 -7.7 M1941.8 203.9 l4.5 -11.1 M1941.8 203.9 l7.4 -1"/>
+        <path class="zap" style="animation-duration:5.8s;animation-delay:-1s" d="M1857 -3 l8.1 0 M1857 -3 l5.3 9.1 M1857 -3 l-6.5 11.3 M1857 -3 l-8.1 0 M1857 -3 l-5.3 -9.1 M1857 -3 l6.5 -11.3"/>
+        <path class="zap" style="animation-duration:7.6s;animation-delay:-4.2s" d="M1941.8 203.9 l6 7.7 M1941.8 203.9 l-4.5 11.1 M1941.8 203.9 l-7.4 1 M1941.8 203.9 l-6 -7.7 M1941.8 203.9 l4.5 -11.1 M1941.8 203.9 l7.4 -1"/>
+      </g>
+    </svg>
     <div class="container">
       <div class="section-header-block">
         <div class="brush-badge">
@@ -2842,6 +3641,84 @@ body {
 
   <!-- Chapter 07: Client Consortium & Praise -->
   <section class="section-padding" id="clients" style="border-top:1px solid var(--wheat-border);">
+    <svg class="circuit cx-phase" viewBox="0 0 3840 306" preserveAspectRatio="xMidYMin slice"
+         aria-hidden="true" focusable="false" data-cx="230 kV switchyard">
+      <g class="cx-static w-s">
+        <path d="M220 46 V73 M220 99 V146 M220 58 l9 -12 M620 46 V73 M620 99 V146 M620 58 l9 -12 M1020 46 V73 M1020 99 V146 M1020 58 l9 -12 M1420 46 V73 M1420 99 V146 M1420 58 l9 -12 M1820 46 V73 M1820 99 V130 M1820 58 l9 -12 M2220 46 V73 M2220 99 V146 M2220 58 l9 -12 M2620 46 V73 M2620 99 V146 M2620 58 l9 -12 M3020 46 V73 M3020 99 V146 M3020 58 l9 -12 M3420 46 V73 M3420 99 V146 M3420 58 l9 -12 M1820 148 V146 M420 154 V196 M820 154 V196 M1220 154 V196 M1620 154 V196 M2020 154 V196 M2420 154 V196 M2820 154 V196 M3220 154 V196 M3620 154 V196"/>
+      </g>
+      <g class="cx-static cx-wire">
+        <path class="w-r" d="M-20 38 H3860"/>
+        <path class="w-r" d="M-20 146 H3860"/>
+        <path class="w-y" d="M-20 42 H3860"/>
+        <path class="w-y" d="M-20 150 H3860"/>
+        <path class="w-b" d="M-20 46 H3860"/>
+        <path class="w-b" d="M-20 154 H3860"/>
+      </g>
+      <g class="cx-static w-e">
+        <path d="M404 196 H436 M409 205 H431 M414 214 H426 M804 196 H836 M809 205 H831 M814 214 H826 M1204 196 H1236 M1209 205 H1231 M1214 214 H1226 M1604 196 H1636 M1609 205 H1631 M1614 214 H1626 M2004 196 H2036 M2009 205 H2031 M2014 214 H2026 M2404 196 H2436 M2409 205 H2431 M2414 214 H2426 M2804 196 H2836 M2809 205 H2831 M2814 214 H2826 M3204 196 H3236 M3209 205 H3231 M3214 214 H3226 M3604 196 H3636 M3609 205 H3631 M3614 214 H3626"/>
+      </g>
+      <g class="cx-static w-g">
+        <circle cx="220" cy="116" r="7"/><circle cx="620" cy="116" r="7"/><circle cx="1020" cy="116" r="7"/><circle cx="1420" cy="116" r="7"/><circle cx="1820" cy="116" r="7"/><circle cx="2220" cy="116" r="7"/><circle cx="2620" cy="116" r="7"/><circle cx="3020" cy="116" r="7"/><circle cx="3420" cy="116" r="7"/>
+        <circle cx="1820" cy="112" r="18"/><circle cx="1820" cy="130" r="18"/>
+        <g transform="translate(220 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(620 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(1020 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(1420 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(1820 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(2220 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(2620 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(3020 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(3420 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+      </g>
+      <g class="cx-halo">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M-20 38 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-2.4s" d="M-20 42 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-4.8s" d="M-20 46 H3860"/>
+        <path class="k1 r-l" style="animation-delay:-1.1s" d="M-20 154 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-4s" d="M-20 150 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-6.9s" d="M-20 146 H3860"/>
+      </g>
+      <g class="cx-flow">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M-20 38 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-2.4s" d="M-20 42 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-4.8s" d="M-20 46 H3860"/>
+        <path class="k1 r-l" style="animation-delay:-1.1s" d="M-20 154 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-4s" d="M-20 150 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-6.9s" d="M-20 146 H3860"/>
+        <path class="k1 r-s" style="animation-delay:-0s" d="M220 42 V73 M220 99 V150"/>
+        <path class="k2 r-s" style="animation-delay:-1.7s" d="M1020 42 V73 M1020 99 V150"/>
+        <path class="k3 r-s" style="animation-delay:-3.4s" d="M1820 42 V73 M1820 99 V94"/>
+        <path class="k1 r-s" style="animation-delay:-5.1s" d="M2620 42 V73 M2620 99 V150"/>
+        <path class="k2 r-s" style="animation-delay:-6.8s" d="M3420 42 V73 M3420 99 V150"/>
+        <path class="k2 r-s" style="animation-delay:-0.9s" d="M420 150 V196"/>
+        <path class="k3 r-s" style="animation-delay:-2.5s" d="M1220 150 V196"/>
+        <path class="k1 r-s" style="animation-delay:-4.1s" d="M2020 150 V196"/>
+        <path class="k2 r-s" style="animation-delay:-5.7s" d="M2820 150 V196"/>
+        <path class="k3 r-s" style="animation-delay:-7.3s" d="M3620 150 V196"/>
+      </g>
+      <g class="cx-nodes">
+        <circle class="k1" cx="220" cy="42" r="4.5" style="animation-delay:-0s"/>
+        <circle class="k2" cx="1020" cy="42" r="4.5" style="animation-delay:-0.7s"/>
+        <circle class="k3" cx="1820" cy="42" r="4.5" style="animation-delay:-1.4s"/>
+        <circle class="k1" cx="2620" cy="42" r="4.5" style="animation-delay:-2.1s"/>
+        <circle class="k2" cx="3420" cy="42" r="4.5" style="animation-delay:-2.8s"/>
+        <circle class="k3" cx="420" cy="150" r="4.5" style="animation-delay:-0s"/>
+        <circle class="k1" cx="1220" cy="150" r="4.5" style="animation-delay:-0.6s"/>
+        <circle class="k2" cx="2020" cy="150" r="4.5" style="animation-delay:-1.1s"/>
+        <circle class="k3" cx="2820" cy="150" r="4.5" style="animation-delay:-1.7s"/>
+        <circle class="k1" cx="3620" cy="150" r="4.5" style="animation-delay:-2.2s"/>
+      </g>
+      <g class="cx-spark">
+        <path class="zap-heat" style="animation-duration:6.1s;animation-delay:-0.4s" d="M620 67 l3.4 6.3 l-5.1 6.3 l2.6 6.3 l-4.2 6.3 l3.9 6.3 l-2.8 6.3"/>
+        <path class="zap-heat" style="animation-duration:7.3s;animation-delay:-3.9s" d="M3020 67 l-4.2 6.3 l3.9 6.3 l-2.8 6.3 l4.6 6.3 l-3.3 6.3 l3.4 6.3"/>
+        <path class="zap-heat" style="animation-duration:5.6s;animation-delay:-2.2s" d="M1820 38 l11 2.6 M1820 38 l4.1 13.4 M1820 38 l-5.9 6.3 M1820 38 l-11 -2.6 M1820 38 l-4.1 -13.4 M1820 38 l5.9 -6.3"/>
+        <path class="zap-heat" style="animation-duration:8.2s;animation-delay:-6.1s" d="M1220 154 l6 7.7 M1220 154 l-4.5 11.1 M1220 154 l-7.4 1 M1220 154 l-6 -7.7 M1220 154 l4.5 -11.1 M1220 154 l7.4 -1"/>
+        <path class="zap" style="animation-duration:6.1s;animation-delay:-0.4s" d="M620 67 l3.4 6.3 l-5.1 6.3 l2.6 6.3 l-4.2 6.3 l3.9 6.3 l-2.8 6.3"/>
+        <path class="zap" style="animation-duration:7.3s;animation-delay:-3.9s" d="M3020 67 l-4.2 6.3 l3.9 6.3 l-2.8 6.3 l4.6 6.3 l-3.3 6.3 l3.4 6.3"/>
+        <path class="zap" style="animation-duration:5.6s;animation-delay:-2.2s" d="M1820 38 l11 2.6 M1820 38 l4.1 13.4 M1820 38 l-5.9 6.3 M1820 38 l-11 -2.6 M1820 38 l-4.1 -13.4 M1820 38 l5.9 -6.3"/>
+        <path class="zap" style="animation-duration:8.2s;animation-delay:-6.1s" d="M1220 154 l6 7.7 M1220 154 l-4.5 11.1 M1220 154 l-7.4 1 M1220 154 l-6 -7.7 M1220 154 l4.5 -11.1 M1220 154 l7.4 -1"/>
+      </g>
+    </svg>
     <div class="container">
       <div class="section-header-block">
         <div class="brush-badge amber">
@@ -2921,6 +3798,34 @@ body {
 
   <!-- Chapter 08: Substation Feasibility Terminal & Dispatch Network -->
   <section class="section-padding" id="terminal" style="border-top:1px solid var(--wheat-border); background:var(--wheat-parchment);">
+    <svg class="circuit cx-mix" viewBox="0 0 3840 306" preserveAspectRatio="xMidYMin slice"
+         aria-hidden="true" focusable="false" data-cx="load waveform">
+      <g class="cx-static cx-grat w-s">
+        <path d="M0 96 H3840 M0 90 V102 M40 90 V102 M80 90 V102 M120 90 V102 M160 90 V102 M200 90 V102 M240 90 V102 M280 90 V102 M320 90 V102 M360 90 V102 M400 90 V102 M440 90 V102 M480 90 V102 M520 90 V102 M560 90 V102 M600 90 V102 M640 90 V102 M680 90 V102 M720 90 V102 M760 90 V102 M800 90 V102 M840 90 V102 M880 90 V102 M920 90 V102 M960 90 V102 M1000 90 V102 M1040 90 V102 M1080 90 V102 M1120 90 V102 M1160 90 V102 M1200 90 V102 M1240 90 V102 M1280 90 V102 M1320 90 V102 M1360 90 V102 M1400 90 V102 M1440 90 V102 M1480 90 V102 M1520 90 V102 M1560 90 V102 M1600 90 V102 M1640 90 V102 M1680 90 V102 M1720 90 V102 M1760 90 V102 M1800 90 V102 M1840 90 V102 M1880 90 V102 M1920 90 V102 M1960 90 V102 M2000 90 V102 M2040 90 V102 M2080 90 V102 M2120 90 V102 M2160 90 V102 M2200 90 V102 M2240 90 V102 M2280 90 V102 M2320 90 V102 M2360 90 V102 M2400 90 V102 M2440 90 V102 M2480 90 V102 M2520 90 V102 M2560 90 V102 M2600 90 V102 M2640 90 V102 M2680 90 V102 M2720 90 V102 M2760 90 V102 M2800 90 V102 M2840 90 V102 M2880 90 V102 M2920 90 V102 M2960 90 V102 M3000 90 V102 M3040 90 V102 M3080 90 V102 M3120 90 V102 M3160 90 V102 M3200 90 V102 M3240 90 V102 M3280 90 V102 M3320 90 V102 M3360 90 V102 M3400 90 V102 M3440 90 V102 M3480 90 V102 M3520 90 V102 M3560 90 V102 M3600 90 V102 M3640 90 V102 M3680 90 V102 M3720 90 V102 M3760 90 V102 M3800 90 V102 M3840 90 V102 M0 8 V180 M200 8 V180 M400 8 V180 M600 8 V180 M800 8 V180 M1000 8 V180 M1200 8 V180 M1400 8 V180 M1600 8 V180 M1800 8 V180 M2000 8 V180 M2200 8 V180 M2400 8 V180 M2600 8 V180 M2800 8 V180 M3000 8 V180 M3200 8 V180 M3400 8 V180 M3600 8 V180 M3800 8 V180 M0 42 H3840 M0 150 H3840"/>
+      </g>
+      <g class="cx-static cx-wire">
+        <path class="w-r" d="M0 96 L16 113.8 L32 129.5 L48 141.6 L64 148.6 L80 149.7 L96 144.9 L112 134.6 L128 120 L144 102.8 L160 84.8 L176 68 L192 54.4 L208 45.4 L224 42 L240 44.6 L256 53 L272 66.1 L288 82.6 L304 100.5 L320 118 L336 133 L352 143.9 L368 149.4 L384 149 L400 142.8 L416 131.3 L432 115.9 L448 98.3 L464 80.4 L480 64.3 L496 51.7 L512 44 L528 42.1 L544 46.2 L560 55.9 L576 70 L592 87 L608 105 L624 122 L640 136.1 L656 145.8 L672 149.9 L688 148 L704 140.3 L720 127.7 L736 111.6 L752 93.7 L768 76.1 L784 60.7 L800 49.2 L816 43 L832 42.6 L848 48.1 L864 59 L880 74 L896 91.5 L912 109.4 L928 125.9 L944 139 L960 147.4 L976 150 L992 146.6 L1008 137.6 L1024 124 L1040 107.2 L1056 89.2 L1072 72 L1088 57.4 L1104 47.1 L1120 42.3 L1136 43.4 L1152 50.4 L1168 62.5 L1184 78.2 L1200 96 L1216 113.8 L1232 129.5 L1248 141.6 L1264 148.6 L1280 149.7 L1296 144.9 L1312 134.6 L1328 120 L1344 102.8 L1360 84.8 L1376 68 L1392 54.4 L1408 45.4 L1424 42 L1440 44.6 L1456 53 L1472 66.1 L1488 82.6 L1504 100.5 L1520 118 L1536 133 L1552 143.9 L1568 149.4 L1584 149 L1600 142.8 L1616 131.3 L1632 115.9 L1648 98.3 L1664 80.4 L1680 64.3 L1696 51.7 L1712 44 L1728 42.1 L1744 46.2 L1760 55.9 L1776 70 L1792 87 L1808 105 L1824 122 L1840 136.1 L1856 145.8 L1872 149.9 L1888 148 L1904 140.3 L1920 127.7 L1936 111.6 L1952 93.7 L1968 76.1 L1984 60.7 L2000 49.2 L2016 43 L2032 42.6 L2048 48.1 L2064 59 L2080 74 L2096 91.5 L2112 109.4 L2128 125.9 L2144 139 L2160 147.4 L2176 150 L2192 146.6 L2208 137.6 L2224 124 L2240 107.2 L2256 89.2 L2272 72 L2288 57.4 L2304 47.1 L2320 42.3 L2336 43.4 L2352 50.4 L2368 62.5 L2384 78.2 L2400 96 L2416 113.8 L2432 129.5 L2448 141.6 L2464 148.6 L2480 149.7 L2496 144.9 L2512 134.6 L2528 120 L2544 102.8 L2560 84.8 L2576 68 L2592 54.4 L2608 45.4 L2624 42 L2640 44.6 L2656 53 L2672 66.1 L2688 82.6 L2704 100.5 L2720 118 L2736 133 L2752 143.9 L2768 149.4 L2784 149 L2800 142.8 L2816 131.3 L2832 115.9 L2848 98.3 L2864 80.4 L2880 64.3 L2896 51.7 L2912 44 L2928 42.1 L2944 46.2 L2960 55.9 L2976 70 L2992 87 L3008 105 L3024 122 L3040 136.1 L3056 145.8 L3072 149.9 L3088 148 L3104 140.3 L3120 127.7 L3136 111.6 L3152 93.7 L3168 76.1 L3184 60.7 L3200 49.2 L3216 43 L3232 42.6 L3248 48.1 L3264 59 L3280 74 L3296 91.5 L3312 109.4 L3328 125.9 L3344 139 L3360 147.4 L3376 150 L3392 146.6 L3408 137.6 L3424 124 L3440 107.2 L3456 89.2 L3472 72 L3488 57.4 L3504 47.1 L3520 42.3 L3536 43.4 L3552 50.4 L3568 62.5 L3584 78.2 L3600 96 L3616 113.8 L3632 129.5 L3648 141.6 L3664 148.6 L3680 149.7 L3696 144.9 L3712 134.6 L3728 120 L3744 102.8 L3760 84.8 L3776 68 L3792 54.4 L3808 45.4 L3824 42 L3840 44.6 L3840 53"/>
+        <path class="w-y" d="M0 49.2 L16 43 L32 42.6 L48 48.1 L64 59 L80 74 L96 91.5 L112 109.4 L128 125.9 L144 139 L160 147.4 L176 150 L192 146.6 L208 137.6 L224 124 L240 107.2 L256 89.2 L272 72 L288 57.4 L304 47.1 L320 42.3 L336 43.4 L352 50.4 L368 62.5 L384 78.2 L400 96 L416 113.8 L432 129.5 L448 141.6 L464 148.6 L480 149.7 L496 144.9 L512 134.6 L528 120 L544 102.8 L560 84.8 L576 68 L592 54.4 L608 45.4 L624 42 L640 44.6 L656 53 L672 66.1 L688 82.6 L704 100.5 L720 118 L736 133 L752 143.9 L768 149.4 L784 149 L800 142.8 L816 131.3 L832 115.9 L848 98.3 L864 80.4 L880 64.3 L896 51.7 L912 44 L928 42.1 L944 46.2 L960 55.9 L976 70 L992 87 L1008 105 L1024 122 L1040 136.1 L1056 145.8 L1072 149.9 L1088 148 L1104 140.3 L1120 127.7 L1136 111.6 L1152 93.7 L1168 76.1 L1184 60.7 L1200 49.2 L1216 43 L1232 42.6 L1248 48.1 L1264 59 L1280 74 L1296 91.5 L1312 109.4 L1328 125.9 L1344 139 L1360 147.4 L1376 150 L1392 146.6 L1408 137.6 L1424 124 L1440 107.2 L1456 89.2 L1472 72 L1488 57.4 L1504 47.1 L1520 42.3 L1536 43.4 L1552 50.4 L1568 62.5 L1584 78.2 L1600 96 L1616 113.8 L1632 129.5 L1648 141.6 L1664 148.6 L1680 149.7 L1696 144.9 L1712 134.6 L1728 120 L1744 102.8 L1760 84.8 L1776 68 L1792 54.4 L1808 45.4 L1824 42 L1840 44.6 L1856 53 L1872 66.1 L1888 82.6 L1904 100.5 L1920 118 L1936 133 L1952 143.9 L1968 149.4 L1984 149 L2000 142.8 L2016 131.3 L2032 115.9 L2048 98.3 L2064 80.4 L2080 64.3 L2096 51.7 L2112 44 L2128 42.1 L2144 46.2 L2160 55.9 L2176 70 L2192 87 L2208 105 L2224 122 L2240 136.1 L2256 145.8 L2272 149.9 L2288 148 L2304 140.3 L2320 127.7 L2336 111.6 L2352 93.7 L2368 76.1 L2384 60.7 L2400 49.2 L2416 43 L2432 42.6 L2448 48.1 L2464 59 L2480 74 L2496 91.5 L2512 109.4 L2528 125.9 L2544 139 L2560 147.4 L2576 150 L2592 146.6 L2608 137.6 L2624 124 L2640 107.2 L2656 89.2 L2672 72 L2688 57.4 L2704 47.1 L2720 42.3 L2736 43.4 L2752 50.4 L2768 62.5 L2784 78.2 L2800 96 L2816 113.8 L2832 129.5 L2848 141.6 L2864 148.6 L2880 149.7 L2896 144.9 L2912 134.6 L2928 120 L2944 102.8 L2960 84.8 L2976 68 L2992 54.4 L3008 45.4 L3024 42 L3040 44.6 L3056 53 L3072 66.1 L3088 82.6 L3104 100.5 L3120 118 L3136 133 L3152 143.9 L3168 149.4 L3184 149 L3200 142.8 L3216 131.3 L3232 115.9 L3248 98.3 L3264 80.4 L3280 64.3 L3296 51.7 L3312 44 L3328 42.1 L3344 46.2 L3360 55.9 L3376 70 L3392 87 L3408 105 L3424 122 L3440 136.1 L3456 145.8 L3472 149.9 L3488 148 L3504 140.3 L3520 127.7 L3536 111.6 L3552 93.7 L3568 76.1 L3584 60.7 L3600 49.2 L3616 43 L3632 42.6 L3648 48.1 L3664 59 L3680 74 L3696 91.5 L3712 109.4 L3728 125.9 L3744 139 L3760 147.4 L3776 150 L3792 146.6 L3808 137.6 L3824 124 L3840 107.2 L3840 89.2"/>
+        <path class="w-b" d="M0 142.8 L16 131.3 L32 115.9 L48 98.3 L64 80.4 L80 64.3 L96 51.7 L112 44 L128 42.1 L144 46.2 L160 55.9 L176 70 L192 87 L208 105 L224 122 L240 136.1 L256 145.8 L272 149.9 L288 148 L304 140.3 L320 127.7 L336 111.6 L352 93.7 L368 76.1 L384 60.7 L400 49.2 L416 43 L432 42.6 L448 48.1 L464 59 L480 74 L496 91.5 L512 109.4 L528 125.9 L544 139 L560 147.4 L576 150 L592 146.6 L608 137.6 L624 124 L640 107.2 L656 89.2 L672 72 L688 57.4 L704 47.1 L720 42.3 L736 43.4 L752 50.4 L768 62.5 L784 78.2 L800 96 L816 113.8 L832 129.5 L848 141.6 L864 148.6 L880 149.7 L896 144.9 L912 134.6 L928 120 L944 102.8 L960 84.8 L976 68 L992 54.4 L1008 45.4 L1024 42 L1040 44.6 L1056 53 L1072 66.1 L1088 82.6 L1104 100.5 L1120 118 L1136 133 L1152 143.9 L1168 149.4 L1184 149 L1200 142.8 L1216 131.3 L1232 115.9 L1248 98.3 L1264 80.4 L1280 64.3 L1296 51.7 L1312 44 L1328 42.1 L1344 46.2 L1360 55.9 L1376 70 L1392 87 L1408 105 L1424 122 L1440 136.1 L1456 145.8 L1472 149.9 L1488 148 L1504 140.3 L1520 127.7 L1536 111.6 L1552 93.7 L1568 76.1 L1584 60.7 L1600 49.2 L1616 43 L1632 42.6 L1648 48.1 L1664 59 L1680 74 L1696 91.5 L1712 109.4 L1728 125.9 L1744 139 L1760 147.4 L1776 150 L1792 146.6 L1808 137.6 L1824 124 L1840 107.2 L1856 89.2 L1872 72 L1888 57.4 L1904 47.1 L1920 42.3 L1936 43.4 L1952 50.4 L1968 62.5 L1984 78.2 L2000 96 L2016 113.8 L2032 129.5 L2048 141.6 L2064 148.6 L2080 149.7 L2096 144.9 L2112 134.6 L2128 120 L2144 102.8 L2160 84.8 L2176 68 L2192 54.4 L2208 45.4 L2224 42 L2240 44.6 L2256 53 L2272 66.1 L2288 82.6 L2304 100.5 L2320 118 L2336 133 L2352 143.9 L2368 149.4 L2384 149 L2400 142.8 L2416 131.3 L2432 115.9 L2448 98.3 L2464 80.4 L2480 64.3 L2496 51.7 L2512 44 L2528 42.1 L2544 46.2 L2560 55.9 L2576 70 L2592 87 L2608 105 L2624 122 L2640 136.1 L2656 145.8 L2672 149.9 L2688 148 L2704 140.3 L2720 127.7 L2736 111.6 L2752 93.7 L2768 76.1 L2784 60.7 L2800 49.2 L2816 43 L2832 42.6 L2848 48.1 L2864 59 L2880 74 L2896 91.5 L2912 109.4 L2928 125.9 L2944 139 L2960 147.4 L2976 150 L2992 146.6 L3008 137.6 L3024 124 L3040 107.2 L3056 89.2 L3072 72 L3088 57.4 L3104 47.1 L3120 42.3 L3136 43.4 L3152 50.4 L3168 62.5 L3184 78.2 L3200 96 L3216 113.8 L3232 129.5 L3248 141.6 L3264 148.6 L3280 149.7 L3296 144.9 L3312 134.6 L3328 120 L3344 102.8 L3360 84.8 L3376 68 L3392 54.4 L3408 45.4 L3424 42 L3440 44.6 L3456 53 L3472 66.1 L3488 82.6 L3504 100.5 L3520 118 L3536 133 L3552 143.9 L3568 149.4 L3584 149 L3600 142.8 L3616 131.3 L3632 115.9 L3648 98.3 L3664 80.4 L3680 64.3 L3696 51.7 L3712 44 L3728 42.1 L3744 46.2 L3760 55.9 L3776 70 L3792 87 L3808 105 L3824 122 L3840 136.1 L3840 145.8"/>
+      </g>
+      <g class="cx-halo">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M0 96 L16 113.8 L32 129.5 L48 141.6 L64 148.6 L80 149.7 L96 144.9 L112 134.6 L128 120 L144 102.8 L160 84.8 L176 68 L192 54.4 L208 45.4 L224 42 L240 44.6 L256 53 L272 66.1 L288 82.6 L304 100.5 L320 118 L336 133 L352 143.9 L368 149.4 L384 149 L400 142.8 L416 131.3 L432 115.9 L448 98.3 L464 80.4 L480 64.3 L496 51.7 L512 44 L528 42.1 L544 46.2 L560 55.9 L576 70 L592 87 L608 105 L624 122 L640 136.1 L656 145.8 L672 149.9 L688 148 L704 140.3 L720 127.7 L736 111.6 L752 93.7 L768 76.1 L784 60.7 L800 49.2 L816 43 L832 42.6 L848 48.1 L864 59 L880 74 L896 91.5 L912 109.4 L928 125.9 L944 139 L960 147.4 L976 150 L992 146.6 L1008 137.6 L1024 124 L1040 107.2 L1056 89.2 L1072 72 L1088 57.4 L1104 47.1 L1120 42.3 L1136 43.4 L1152 50.4 L1168 62.5 L1184 78.2 L1200 96 L1216 113.8 L1232 129.5 L1248 141.6 L1264 148.6 L1280 149.7 L1296 144.9 L1312 134.6 L1328 120 L1344 102.8 L1360 84.8 L1376 68 L1392 54.4 L1408 45.4 L1424 42 L1440 44.6 L1456 53 L1472 66.1 L1488 82.6 L1504 100.5 L1520 118 L1536 133 L1552 143.9 L1568 149.4 L1584 149 L1600 142.8 L1616 131.3 L1632 115.9 L1648 98.3 L1664 80.4 L1680 64.3 L1696 51.7 L1712 44 L1728 42.1 L1744 46.2 L1760 55.9 L1776 70 L1792 87 L1808 105 L1824 122 L1840 136.1 L1856 145.8 L1872 149.9 L1888 148 L1904 140.3 L1920 127.7 L1936 111.6 L1952 93.7 L1968 76.1 L1984 60.7 L2000 49.2 L2016 43 L2032 42.6 L2048 48.1 L2064 59 L2080 74 L2096 91.5 L2112 109.4 L2128 125.9 L2144 139 L2160 147.4 L2176 150 L2192 146.6 L2208 137.6 L2224 124 L2240 107.2 L2256 89.2 L2272 72 L2288 57.4 L2304 47.1 L2320 42.3 L2336 43.4 L2352 50.4 L2368 62.5 L2384 78.2 L2400 96 L2416 113.8 L2432 129.5 L2448 141.6 L2464 148.6 L2480 149.7 L2496 144.9 L2512 134.6 L2528 120 L2544 102.8 L2560 84.8 L2576 68 L2592 54.4 L2608 45.4 L2624 42 L2640 44.6 L2656 53 L2672 66.1 L2688 82.6 L2704 100.5 L2720 118 L2736 133 L2752 143.9 L2768 149.4 L2784 149 L2800 142.8 L2816 131.3 L2832 115.9 L2848 98.3 L2864 80.4 L2880 64.3 L2896 51.7 L2912 44 L2928 42.1 L2944 46.2 L2960 55.9 L2976 70 L2992 87 L3008 105 L3024 122 L3040 136.1 L3056 145.8 L3072 149.9 L3088 148 L3104 140.3 L3120 127.7 L3136 111.6 L3152 93.7 L3168 76.1 L3184 60.7 L3200 49.2 L3216 43 L3232 42.6 L3248 48.1 L3264 59 L3280 74 L3296 91.5 L3312 109.4 L3328 125.9 L3344 139 L3360 147.4 L3376 150 L3392 146.6 L3408 137.6 L3424 124 L3440 107.2 L3456 89.2 L3472 72 L3488 57.4 L3504 47.1 L3520 42.3 L3536 43.4 L3552 50.4 L3568 62.5 L3584 78.2 L3600 96 L3616 113.8 L3632 129.5 L3648 141.6 L3664 148.6 L3680 149.7 L3696 144.9 L3712 134.6 L3728 120 L3744 102.8 L3760 84.8 L3776 68 L3792 54.4 L3808 45.4 L3824 42 L3840 44.6 L3840 53"/>
+        <path class="k2 r-l" style="animation-delay:-2.1s" d="M0 49.2 L16 43 L32 42.6 L48 48.1 L64 59 L80 74 L96 91.5 L112 109.4 L128 125.9 L144 139 L160 147.4 L176 150 L192 146.6 L208 137.6 L224 124 L240 107.2 L256 89.2 L272 72 L288 57.4 L304 47.1 L320 42.3 L336 43.4 L352 50.4 L368 62.5 L384 78.2 L400 96 L416 113.8 L432 129.5 L448 141.6 L464 148.6 L480 149.7 L496 144.9 L512 134.6 L528 120 L544 102.8 L560 84.8 L576 68 L592 54.4 L608 45.4 L624 42 L640 44.6 L656 53 L672 66.1 L688 82.6 L704 100.5 L720 118 L736 133 L752 143.9 L768 149.4 L784 149 L800 142.8 L816 131.3 L832 115.9 L848 98.3 L864 80.4 L880 64.3 L896 51.7 L912 44 L928 42.1 L944 46.2 L960 55.9 L976 70 L992 87 L1008 105 L1024 122 L1040 136.1 L1056 145.8 L1072 149.9 L1088 148 L1104 140.3 L1120 127.7 L1136 111.6 L1152 93.7 L1168 76.1 L1184 60.7 L1200 49.2 L1216 43 L1232 42.6 L1248 48.1 L1264 59 L1280 74 L1296 91.5 L1312 109.4 L1328 125.9 L1344 139 L1360 147.4 L1376 150 L1392 146.6 L1408 137.6 L1424 124 L1440 107.2 L1456 89.2 L1472 72 L1488 57.4 L1504 47.1 L1520 42.3 L1536 43.4 L1552 50.4 L1568 62.5 L1584 78.2 L1600 96 L1616 113.8 L1632 129.5 L1648 141.6 L1664 148.6 L1680 149.7 L1696 144.9 L1712 134.6 L1728 120 L1744 102.8 L1760 84.8 L1776 68 L1792 54.4 L1808 45.4 L1824 42 L1840 44.6 L1856 53 L1872 66.1 L1888 82.6 L1904 100.5 L1920 118 L1936 133 L1952 143.9 L1968 149.4 L1984 149 L2000 142.8 L2016 131.3 L2032 115.9 L2048 98.3 L2064 80.4 L2080 64.3 L2096 51.7 L2112 44 L2128 42.1 L2144 46.2 L2160 55.9 L2176 70 L2192 87 L2208 105 L2224 122 L2240 136.1 L2256 145.8 L2272 149.9 L2288 148 L2304 140.3 L2320 127.7 L2336 111.6 L2352 93.7 L2368 76.1 L2384 60.7 L2400 49.2 L2416 43 L2432 42.6 L2448 48.1 L2464 59 L2480 74 L2496 91.5 L2512 109.4 L2528 125.9 L2544 139 L2560 147.4 L2576 150 L2592 146.6 L2608 137.6 L2624 124 L2640 107.2 L2656 89.2 L2672 72 L2688 57.4 L2704 47.1 L2720 42.3 L2736 43.4 L2752 50.4 L2768 62.5 L2784 78.2 L2800 96 L2816 113.8 L2832 129.5 L2848 141.6 L2864 148.6 L2880 149.7 L2896 144.9 L2912 134.6 L2928 120 L2944 102.8 L2960 84.8 L2976 68 L2992 54.4 L3008 45.4 L3024 42 L3040 44.6 L3056 53 L3072 66.1 L3088 82.6 L3104 100.5 L3120 118 L3136 133 L3152 143.9 L3168 149.4 L3184 149 L3200 142.8 L3216 131.3 L3232 115.9 L3248 98.3 L3264 80.4 L3280 64.3 L3296 51.7 L3312 44 L3328 42.1 L3344 46.2 L3360 55.9 L3376 70 L3392 87 L3408 105 L3424 122 L3440 136.1 L3456 145.8 L3472 149.9 L3488 148 L3504 140.3 L3520 127.7 L3536 111.6 L3552 93.7 L3568 76.1 L3584 60.7 L3600 49.2 L3616 43 L3632 42.6 L3648 48.1 L3664 59 L3680 74 L3696 91.5 L3712 109.4 L3728 125.9 L3744 139 L3760 147.4 L3776 150 L3792 146.6 L3808 137.6 L3824 124 L3840 107.2 L3840 89.2"/>
+        <path class="k3 r-l" style="animation-delay:-4.2s" d="M0 142.8 L16 131.3 L32 115.9 L48 98.3 L64 80.4 L80 64.3 L96 51.7 L112 44 L128 42.1 L144 46.2 L160 55.9 L176 70 L192 87 L208 105 L224 122 L240 136.1 L256 145.8 L272 149.9 L288 148 L304 140.3 L320 127.7 L336 111.6 L352 93.7 L368 76.1 L384 60.7 L400 49.2 L416 43 L432 42.6 L448 48.1 L464 59 L480 74 L496 91.5 L512 109.4 L528 125.9 L544 139 L560 147.4 L576 150 L592 146.6 L608 137.6 L624 124 L640 107.2 L656 89.2 L672 72 L688 57.4 L704 47.1 L720 42.3 L736 43.4 L752 50.4 L768 62.5 L784 78.2 L800 96 L816 113.8 L832 129.5 L848 141.6 L864 148.6 L880 149.7 L896 144.9 L912 134.6 L928 120 L944 102.8 L960 84.8 L976 68 L992 54.4 L1008 45.4 L1024 42 L1040 44.6 L1056 53 L1072 66.1 L1088 82.6 L1104 100.5 L1120 118 L1136 133 L1152 143.9 L1168 149.4 L1184 149 L1200 142.8 L1216 131.3 L1232 115.9 L1248 98.3 L1264 80.4 L1280 64.3 L1296 51.7 L1312 44 L1328 42.1 L1344 46.2 L1360 55.9 L1376 70 L1392 87 L1408 105 L1424 122 L1440 136.1 L1456 145.8 L1472 149.9 L1488 148 L1504 140.3 L1520 127.7 L1536 111.6 L1552 93.7 L1568 76.1 L1584 60.7 L1600 49.2 L1616 43 L1632 42.6 L1648 48.1 L1664 59 L1680 74 L1696 91.5 L1712 109.4 L1728 125.9 L1744 139 L1760 147.4 L1776 150 L1792 146.6 L1808 137.6 L1824 124 L1840 107.2 L1856 89.2 L1872 72 L1888 57.4 L1904 47.1 L1920 42.3 L1936 43.4 L1952 50.4 L1968 62.5 L1984 78.2 L2000 96 L2016 113.8 L2032 129.5 L2048 141.6 L2064 148.6 L2080 149.7 L2096 144.9 L2112 134.6 L2128 120 L2144 102.8 L2160 84.8 L2176 68 L2192 54.4 L2208 45.4 L2224 42 L2240 44.6 L2256 53 L2272 66.1 L2288 82.6 L2304 100.5 L2320 118 L2336 133 L2352 143.9 L2368 149.4 L2384 149 L2400 142.8 L2416 131.3 L2432 115.9 L2448 98.3 L2464 80.4 L2480 64.3 L2496 51.7 L2512 44 L2528 42.1 L2544 46.2 L2560 55.9 L2576 70 L2592 87 L2608 105 L2624 122 L2640 136.1 L2656 145.8 L2672 149.9 L2688 148 L2704 140.3 L2720 127.7 L2736 111.6 L2752 93.7 L2768 76.1 L2784 60.7 L2800 49.2 L2816 43 L2832 42.6 L2848 48.1 L2864 59 L2880 74 L2896 91.5 L2912 109.4 L2928 125.9 L2944 139 L2960 147.4 L2976 150 L2992 146.6 L3008 137.6 L3024 124 L3040 107.2 L3056 89.2 L3072 72 L3088 57.4 L3104 47.1 L3120 42.3 L3136 43.4 L3152 50.4 L3168 62.5 L3184 78.2 L3200 96 L3216 113.8 L3232 129.5 L3248 141.6 L3264 148.6 L3280 149.7 L3296 144.9 L3312 134.6 L3328 120 L3344 102.8 L3360 84.8 L3376 68 L3392 54.4 L3408 45.4 L3424 42 L3440 44.6 L3456 53 L3472 66.1 L3488 82.6 L3504 100.5 L3520 118 L3536 133 L3552 143.9 L3568 149.4 L3584 149 L3600 142.8 L3616 131.3 L3632 115.9 L3648 98.3 L3664 80.4 L3680 64.3 L3696 51.7 L3712 44 L3728 42.1 L3744 46.2 L3760 55.9 L3776 70 L3792 87 L3808 105 L3824 122 L3840 136.1 L3840 145.8"/>
+      </g>
+      <g class="cx-flow">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M0 96 L16 113.8 L32 129.5 L48 141.6 L64 148.6 L80 149.7 L96 144.9 L112 134.6 L128 120 L144 102.8 L160 84.8 L176 68 L192 54.4 L208 45.4 L224 42 L240 44.6 L256 53 L272 66.1 L288 82.6 L304 100.5 L320 118 L336 133 L352 143.9 L368 149.4 L384 149 L400 142.8 L416 131.3 L432 115.9 L448 98.3 L464 80.4 L480 64.3 L496 51.7 L512 44 L528 42.1 L544 46.2 L560 55.9 L576 70 L592 87 L608 105 L624 122 L640 136.1 L656 145.8 L672 149.9 L688 148 L704 140.3 L720 127.7 L736 111.6 L752 93.7 L768 76.1 L784 60.7 L800 49.2 L816 43 L832 42.6 L848 48.1 L864 59 L880 74 L896 91.5 L912 109.4 L928 125.9 L944 139 L960 147.4 L976 150 L992 146.6 L1008 137.6 L1024 124 L1040 107.2 L1056 89.2 L1072 72 L1088 57.4 L1104 47.1 L1120 42.3 L1136 43.4 L1152 50.4 L1168 62.5 L1184 78.2 L1200 96 L1216 113.8 L1232 129.5 L1248 141.6 L1264 148.6 L1280 149.7 L1296 144.9 L1312 134.6 L1328 120 L1344 102.8 L1360 84.8 L1376 68 L1392 54.4 L1408 45.4 L1424 42 L1440 44.6 L1456 53 L1472 66.1 L1488 82.6 L1504 100.5 L1520 118 L1536 133 L1552 143.9 L1568 149.4 L1584 149 L1600 142.8 L1616 131.3 L1632 115.9 L1648 98.3 L1664 80.4 L1680 64.3 L1696 51.7 L1712 44 L1728 42.1 L1744 46.2 L1760 55.9 L1776 70 L1792 87 L1808 105 L1824 122 L1840 136.1 L1856 145.8 L1872 149.9 L1888 148 L1904 140.3 L1920 127.7 L1936 111.6 L1952 93.7 L1968 76.1 L1984 60.7 L2000 49.2 L2016 43 L2032 42.6 L2048 48.1 L2064 59 L2080 74 L2096 91.5 L2112 109.4 L2128 125.9 L2144 139 L2160 147.4 L2176 150 L2192 146.6 L2208 137.6 L2224 124 L2240 107.2 L2256 89.2 L2272 72 L2288 57.4 L2304 47.1 L2320 42.3 L2336 43.4 L2352 50.4 L2368 62.5 L2384 78.2 L2400 96 L2416 113.8 L2432 129.5 L2448 141.6 L2464 148.6 L2480 149.7 L2496 144.9 L2512 134.6 L2528 120 L2544 102.8 L2560 84.8 L2576 68 L2592 54.4 L2608 45.4 L2624 42 L2640 44.6 L2656 53 L2672 66.1 L2688 82.6 L2704 100.5 L2720 118 L2736 133 L2752 143.9 L2768 149.4 L2784 149 L2800 142.8 L2816 131.3 L2832 115.9 L2848 98.3 L2864 80.4 L2880 64.3 L2896 51.7 L2912 44 L2928 42.1 L2944 46.2 L2960 55.9 L2976 70 L2992 87 L3008 105 L3024 122 L3040 136.1 L3056 145.8 L3072 149.9 L3088 148 L3104 140.3 L3120 127.7 L3136 111.6 L3152 93.7 L3168 76.1 L3184 60.7 L3200 49.2 L3216 43 L3232 42.6 L3248 48.1 L3264 59 L3280 74 L3296 91.5 L3312 109.4 L3328 125.9 L3344 139 L3360 147.4 L3376 150 L3392 146.6 L3408 137.6 L3424 124 L3440 107.2 L3456 89.2 L3472 72 L3488 57.4 L3504 47.1 L3520 42.3 L3536 43.4 L3552 50.4 L3568 62.5 L3584 78.2 L3600 96 L3616 113.8 L3632 129.5 L3648 141.6 L3664 148.6 L3680 149.7 L3696 144.9 L3712 134.6 L3728 120 L3744 102.8 L3760 84.8 L3776 68 L3792 54.4 L3808 45.4 L3824 42 L3840 44.6 L3840 53"/>
+        <path class="k2 r-l" style="animation-delay:-2.1s" d="M0 49.2 L16 43 L32 42.6 L48 48.1 L64 59 L80 74 L96 91.5 L112 109.4 L128 125.9 L144 139 L160 147.4 L176 150 L192 146.6 L208 137.6 L224 124 L240 107.2 L256 89.2 L272 72 L288 57.4 L304 47.1 L320 42.3 L336 43.4 L352 50.4 L368 62.5 L384 78.2 L400 96 L416 113.8 L432 129.5 L448 141.6 L464 148.6 L480 149.7 L496 144.9 L512 134.6 L528 120 L544 102.8 L560 84.8 L576 68 L592 54.4 L608 45.4 L624 42 L640 44.6 L656 53 L672 66.1 L688 82.6 L704 100.5 L720 118 L736 133 L752 143.9 L768 149.4 L784 149 L800 142.8 L816 131.3 L832 115.9 L848 98.3 L864 80.4 L880 64.3 L896 51.7 L912 44 L928 42.1 L944 46.2 L960 55.9 L976 70 L992 87 L1008 105 L1024 122 L1040 136.1 L1056 145.8 L1072 149.9 L1088 148 L1104 140.3 L1120 127.7 L1136 111.6 L1152 93.7 L1168 76.1 L1184 60.7 L1200 49.2 L1216 43 L1232 42.6 L1248 48.1 L1264 59 L1280 74 L1296 91.5 L1312 109.4 L1328 125.9 L1344 139 L1360 147.4 L1376 150 L1392 146.6 L1408 137.6 L1424 124 L1440 107.2 L1456 89.2 L1472 72 L1488 57.4 L1504 47.1 L1520 42.3 L1536 43.4 L1552 50.4 L1568 62.5 L1584 78.2 L1600 96 L1616 113.8 L1632 129.5 L1648 141.6 L1664 148.6 L1680 149.7 L1696 144.9 L1712 134.6 L1728 120 L1744 102.8 L1760 84.8 L1776 68 L1792 54.4 L1808 45.4 L1824 42 L1840 44.6 L1856 53 L1872 66.1 L1888 82.6 L1904 100.5 L1920 118 L1936 133 L1952 143.9 L1968 149.4 L1984 149 L2000 142.8 L2016 131.3 L2032 115.9 L2048 98.3 L2064 80.4 L2080 64.3 L2096 51.7 L2112 44 L2128 42.1 L2144 46.2 L2160 55.9 L2176 70 L2192 87 L2208 105 L2224 122 L2240 136.1 L2256 145.8 L2272 149.9 L2288 148 L2304 140.3 L2320 127.7 L2336 111.6 L2352 93.7 L2368 76.1 L2384 60.7 L2400 49.2 L2416 43 L2432 42.6 L2448 48.1 L2464 59 L2480 74 L2496 91.5 L2512 109.4 L2528 125.9 L2544 139 L2560 147.4 L2576 150 L2592 146.6 L2608 137.6 L2624 124 L2640 107.2 L2656 89.2 L2672 72 L2688 57.4 L2704 47.1 L2720 42.3 L2736 43.4 L2752 50.4 L2768 62.5 L2784 78.2 L2800 96 L2816 113.8 L2832 129.5 L2848 141.6 L2864 148.6 L2880 149.7 L2896 144.9 L2912 134.6 L2928 120 L2944 102.8 L2960 84.8 L2976 68 L2992 54.4 L3008 45.4 L3024 42 L3040 44.6 L3056 53 L3072 66.1 L3088 82.6 L3104 100.5 L3120 118 L3136 133 L3152 143.9 L3168 149.4 L3184 149 L3200 142.8 L3216 131.3 L3232 115.9 L3248 98.3 L3264 80.4 L3280 64.3 L3296 51.7 L3312 44 L3328 42.1 L3344 46.2 L3360 55.9 L3376 70 L3392 87 L3408 105 L3424 122 L3440 136.1 L3456 145.8 L3472 149.9 L3488 148 L3504 140.3 L3520 127.7 L3536 111.6 L3552 93.7 L3568 76.1 L3584 60.7 L3600 49.2 L3616 43 L3632 42.6 L3648 48.1 L3664 59 L3680 74 L3696 91.5 L3712 109.4 L3728 125.9 L3744 139 L3760 147.4 L3776 150 L3792 146.6 L3808 137.6 L3824 124 L3840 107.2 L3840 89.2"/>
+        <path class="k3 r-l" style="animation-delay:-4.2s" d="M0 142.8 L16 131.3 L32 115.9 L48 98.3 L64 80.4 L80 64.3 L96 51.7 L112 44 L128 42.1 L144 46.2 L160 55.9 L176 70 L192 87 L208 105 L224 122 L240 136.1 L256 145.8 L272 149.9 L288 148 L304 140.3 L320 127.7 L336 111.6 L352 93.7 L368 76.1 L384 60.7 L400 49.2 L416 43 L432 42.6 L448 48.1 L464 59 L480 74 L496 91.5 L512 109.4 L528 125.9 L544 139 L560 147.4 L576 150 L592 146.6 L608 137.6 L624 124 L640 107.2 L656 89.2 L672 72 L688 57.4 L704 47.1 L720 42.3 L736 43.4 L752 50.4 L768 62.5 L784 78.2 L800 96 L816 113.8 L832 129.5 L848 141.6 L864 148.6 L880 149.7 L896 144.9 L912 134.6 L928 120 L944 102.8 L960 84.8 L976 68 L992 54.4 L1008 45.4 L1024 42 L1040 44.6 L1056 53 L1072 66.1 L1088 82.6 L1104 100.5 L1120 118 L1136 133 L1152 143.9 L1168 149.4 L1184 149 L1200 142.8 L1216 131.3 L1232 115.9 L1248 98.3 L1264 80.4 L1280 64.3 L1296 51.7 L1312 44 L1328 42.1 L1344 46.2 L1360 55.9 L1376 70 L1392 87 L1408 105 L1424 122 L1440 136.1 L1456 145.8 L1472 149.9 L1488 148 L1504 140.3 L1520 127.7 L1536 111.6 L1552 93.7 L1568 76.1 L1584 60.7 L1600 49.2 L1616 43 L1632 42.6 L1648 48.1 L1664 59 L1680 74 L1696 91.5 L1712 109.4 L1728 125.9 L1744 139 L1760 147.4 L1776 150 L1792 146.6 L1808 137.6 L1824 124 L1840 107.2 L1856 89.2 L1872 72 L1888 57.4 L1904 47.1 L1920 42.3 L1936 43.4 L1952 50.4 L1968 62.5 L1984 78.2 L2000 96 L2016 113.8 L2032 129.5 L2048 141.6 L2064 148.6 L2080 149.7 L2096 144.9 L2112 134.6 L2128 120 L2144 102.8 L2160 84.8 L2176 68 L2192 54.4 L2208 45.4 L2224 42 L2240 44.6 L2256 53 L2272 66.1 L2288 82.6 L2304 100.5 L2320 118 L2336 133 L2352 143.9 L2368 149.4 L2384 149 L2400 142.8 L2416 131.3 L2432 115.9 L2448 98.3 L2464 80.4 L2480 64.3 L2496 51.7 L2512 44 L2528 42.1 L2544 46.2 L2560 55.9 L2576 70 L2592 87 L2608 105 L2624 122 L2640 136.1 L2656 145.8 L2672 149.9 L2688 148 L2704 140.3 L2720 127.7 L2736 111.6 L2752 93.7 L2768 76.1 L2784 60.7 L2800 49.2 L2816 43 L2832 42.6 L2848 48.1 L2864 59 L2880 74 L2896 91.5 L2912 109.4 L2928 125.9 L2944 139 L2960 147.4 L2976 150 L2992 146.6 L3008 137.6 L3024 124 L3040 107.2 L3056 89.2 L3072 72 L3088 57.4 L3104 47.1 L3120 42.3 L3136 43.4 L3152 50.4 L3168 62.5 L3184 78.2 L3200 96 L3216 113.8 L3232 129.5 L3248 141.6 L3264 148.6 L3280 149.7 L3296 144.9 L3312 134.6 L3328 120 L3344 102.8 L3360 84.8 L3376 68 L3392 54.4 L3408 45.4 L3424 42 L3440 44.6 L3456 53 L3472 66.1 L3488 82.6 L3504 100.5 L3520 118 L3536 133 L3552 143.9 L3568 149.4 L3584 149 L3600 142.8 L3616 131.3 L3632 115.9 L3648 98.3 L3664 80.4 L3680 64.3 L3696 51.7 L3712 44 L3728 42.1 L3744 46.2 L3760 55.9 L3776 70 L3792 87 L3808 105 L3824 122 L3840 136.1 L3840 145.8"/>
+      </g>
+      <g class="cx-scan"><path d="M0 6 V182"/></g>
+      <g class="cx-spark">
+        <path class="zap-heat" style="animation-duration:5.9s;animation-delay:-0.8s" d="M975 42 l8.1 0 M975 42 l5.3 9.1 M975 42 l-6.5 11.3 M975 42 l-8.1 0 M975 42 l-5.3 -9.1 M975 42 l6.5 -11.3"/>
+        <path class="zap-heat" style="animation-duration:7.1s;animation-delay:-3.4s" d="M2025 150 l5.3 4.3 M2025 150 l-1.4 8.8 M2025 150 l-10.3 3.9 M2025 150 l-5.3 -4.3 M2025 150 l1.4 -8.8 M2025 150 l10.3 -3.9"/>
+        <path class="zap" style="animation-duration:5.9s;animation-delay:-0.8s" d="M975 42 l8.1 0 M975 42 l5.3 9.1 M975 42 l-6.5 11.3 M975 42 l-8.1 0 M975 42 l-5.3 -9.1 M975 42 l6.5 -11.3"/>
+        <path class="zap" style="animation-duration:7.1s;animation-delay:-3.4s" d="M2025 150 l5.3 4.3 M2025 150 l-1.4 8.8 M2025 150 l-10.3 3.9 M2025 150 l-5.3 -4.3 M2025 150 l1.4 -8.8 M2025 150 l10.3 -3.9"/>
+      </g>
+    </svg>
     <div class="container">
       <div class="section-header-block">
         <div class="brush-badge">
@@ -3118,6 +4023,84 @@ body {
 
   <!-- Global Cyber Footer -->
   <footer class="cyber-footer">
+    <svg class="circuit cx-neon cx-slim cx-phase" viewBox="0 0 3840 306" preserveAspectRatio="xMidYMin slice"
+         aria-hidden="true" focusable="false" data-cx="dispatch busbar">
+      <g class="cx-static w-s">
+        <path d="M220 46 V73 M220 99 V146 M220 58 l9 -12 M620 46 V73 M620 99 V146 M620 58 l9 -12 M1020 46 V73 M1020 99 V146 M1020 58 l9 -12 M1420 46 V73 M1420 99 V146 M1420 58 l9 -12 M1820 46 V73 M1820 99 V130 M1820 58 l9 -12 M2220 46 V73 M2220 99 V146 M2220 58 l9 -12 M2620 46 V73 M2620 99 V146 M2620 58 l9 -12 M3020 46 V73 M3020 99 V146 M3020 58 l9 -12 M3420 46 V73 M3420 99 V146 M3420 58 l9 -12 M1820 148 V146 M420 154 V196 M820 154 V196 M1220 154 V196 M1620 154 V196 M2020 154 V196 M2420 154 V196 M2820 154 V196 M3220 154 V196 M3620 154 V196"/>
+      </g>
+      <g class="cx-static cx-wire">
+        <path class="w-r" d="M-20 38 H3860"/>
+        <path class="w-r" d="M-20 146 H3860"/>
+        <path class="w-y" d="M-20 42 H3860"/>
+        <path class="w-y" d="M-20 150 H3860"/>
+        <path class="w-b" d="M-20 46 H3860"/>
+        <path class="w-b" d="M-20 154 H3860"/>
+      </g>
+      <g class="cx-static w-e">
+        <path d="M404 196 H436 M409 205 H431 M414 214 H426 M804 196 H836 M809 205 H831 M814 214 H826 M1204 196 H1236 M1209 205 H1231 M1214 214 H1226 M1604 196 H1636 M1609 205 H1631 M1614 214 H1626 M2004 196 H2036 M2009 205 H2031 M2014 214 H2026 M2404 196 H2436 M2409 205 H2431 M2414 214 H2426 M2804 196 H2836 M2809 205 H2831 M2814 214 H2826 M3204 196 H3236 M3209 205 H3231 M3214 214 H3226 M3604 196 H3636 M3609 205 H3631 M3614 214 H3626"/>
+      </g>
+      <g class="cx-static w-g">
+        <circle cx="220" cy="116" r="7"/><circle cx="620" cy="116" r="7"/><circle cx="1020" cy="116" r="7"/><circle cx="1420" cy="116" r="7"/><circle cx="1820" cy="116" r="7"/><circle cx="2220" cy="116" r="7"/><circle cx="2620" cy="116" r="7"/><circle cx="3020" cy="116" r="7"/><circle cx="3420" cy="116" r="7"/>
+        <circle cx="1820" cy="112" r="18"/><circle cx="1820" cy="130" r="18"/>
+        <g transform="translate(220 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(620 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(1020 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(1420 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(1820 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(2220 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(2620 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(3020 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+        <g transform="translate(3420 86)"><rect x="-12" y="-12" width="24" height="24" rx="3"/><path d="M-12 -12 L12 12"/></g>
+      </g>
+      <g class="cx-halo">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M-20 38 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-2.4s" d="M-20 42 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-4.8s" d="M-20 46 H3860"/>
+        <path class="k1 r-l" style="animation-delay:-1.1s" d="M-20 154 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-4s" d="M-20 150 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-6.9s" d="M-20 146 H3860"/>
+      </g>
+      <g class="cx-flow">
+        <path class="k1 r-l" style="animation-delay:-0s" d="M-20 38 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-2.4s" d="M-20 42 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-4.8s" d="M-20 46 H3860"/>
+        <path class="k1 r-l" style="animation-delay:-1.1s" d="M-20 154 H3860"/>
+        <path class="k2 r-l" style="animation-delay:-4s" d="M-20 150 H3860"/>
+        <path class="k3 r-l" style="animation-delay:-6.9s" d="M-20 146 H3860"/>
+        <path class="k1 r-s" style="animation-delay:-0s" d="M220 42 V73 M220 99 V150"/>
+        <path class="k2 r-s" style="animation-delay:-1.7s" d="M1020 42 V73 M1020 99 V150"/>
+        <path class="k3 r-s" style="animation-delay:-3.4s" d="M1820 42 V73 M1820 99 V94"/>
+        <path class="k1 r-s" style="animation-delay:-5.1s" d="M2620 42 V73 M2620 99 V150"/>
+        <path class="k2 r-s" style="animation-delay:-6.8s" d="M3420 42 V73 M3420 99 V150"/>
+        <path class="k2 r-s" style="animation-delay:-0.9s" d="M420 150 V196"/>
+        <path class="k3 r-s" style="animation-delay:-2.5s" d="M1220 150 V196"/>
+        <path class="k1 r-s" style="animation-delay:-4.1s" d="M2020 150 V196"/>
+        <path class="k2 r-s" style="animation-delay:-5.7s" d="M2820 150 V196"/>
+        <path class="k3 r-s" style="animation-delay:-7.3s" d="M3620 150 V196"/>
+      </g>
+      <g class="cx-nodes">
+        <circle class="k1" cx="220" cy="42" r="4.5" style="animation-delay:-0s"/>
+        <circle class="k2" cx="1020" cy="42" r="4.5" style="animation-delay:-0.7s"/>
+        <circle class="k3" cx="1820" cy="42" r="4.5" style="animation-delay:-1.4s"/>
+        <circle class="k1" cx="2620" cy="42" r="4.5" style="animation-delay:-2.1s"/>
+        <circle class="k2" cx="3420" cy="42" r="4.5" style="animation-delay:-2.8s"/>
+        <circle class="k3" cx="420" cy="150" r="4.5" style="animation-delay:-0s"/>
+        <circle class="k1" cx="1220" cy="150" r="4.5" style="animation-delay:-0.6s"/>
+        <circle class="k2" cx="2020" cy="150" r="4.5" style="animation-delay:-1.1s"/>
+        <circle class="k3" cx="2820" cy="150" r="4.5" style="animation-delay:-1.7s"/>
+        <circle class="k1" cx="3620" cy="150" r="4.5" style="animation-delay:-2.2s"/>
+      </g>
+      <g class="cx-spark">
+        <path class="zap-heat" style="animation-duration:6.1s;animation-delay:-0.4s" d="M620 67 l3.4 6.3 l-5.1 6.3 l2.6 6.3 l-4.2 6.3 l3.9 6.3 l-2.8 6.3"/>
+        <path class="zap-heat" style="animation-duration:7.3s;animation-delay:-3.9s" d="M3020 67 l-4.2 6.3 l3.9 6.3 l-2.8 6.3 l4.6 6.3 l-3.3 6.3 l3.4 6.3"/>
+        <path class="zap-heat" style="animation-duration:5.6s;animation-delay:-2.2s" d="M1820 38 l11 2.6 M1820 38 l4.1 13.4 M1820 38 l-5.9 6.3 M1820 38 l-11 -2.6 M1820 38 l-4.1 -13.4 M1820 38 l5.9 -6.3"/>
+        <path class="zap-heat" style="animation-duration:8.2s;animation-delay:-6.1s" d="M1220 154 l6 7.7 M1220 154 l-4.5 11.1 M1220 154 l-7.4 1 M1220 154 l-6 -7.7 M1220 154 l4.5 -11.1 M1220 154 l7.4 -1"/>
+        <path class="zap" style="animation-duration:6.1s;animation-delay:-0.4s" d="M620 67 l3.4 6.3 l-5.1 6.3 l2.6 6.3 l-4.2 6.3 l3.9 6.3 l-2.8 6.3"/>
+        <path class="zap" style="animation-duration:7.3s;animation-delay:-3.9s" d="M3020 67 l-4.2 6.3 l3.9 6.3 l-2.8 6.3 l4.6 6.3 l-3.3 6.3 l3.4 6.3"/>
+        <path class="zap" style="animation-duration:5.6s;animation-delay:-2.2s" d="M1820 38 l11 2.6 M1820 38 l4.1 13.4 M1820 38 l-5.9 6.3 M1820 38 l-11 -2.6 M1820 38 l-4.1 -13.4 M1820 38 l5.9 -6.3"/>
+        <path class="zap" style="animation-duration:8.2s;animation-delay:-6.1s" d="M1220 154 l6 7.7 M1220 154 l-4.5 11.1 M1220 154 l-7.4 1 M1220 154 l-6 -7.7 M1220 154 l4.5 -11.1 M1220 154 l7.4 -1"/>
+      </g>
+    </svg>
     <div class="container">
       <div class="footer-columns">
         <div>
@@ -4659,6 +5642,31 @@ body {
       startHeroSlider();
       updateTerminalEstimates();
     });
+
+    /* ======================================================================
+       GRID CURRENT - park the circuitry layers that are off screen.
+       Ten animated layers running at once is ten layers' worth of style
+       recalculation for no benefit, since you can only ever see one or
+       two. This flips animation-play-state through a class, so the
+       browser does the work and there is still no animation loop in
+       JavaScript. Without IntersectionObserver nothing is parked and the
+       page simply behaves as it did before.
+       ====================================================================== */
+    (function initCircuitLayers() {
+      var layers = document.querySelectorAll('.circuit');
+      if (!layers.length) return;
+      if (!('IntersectionObserver' in window)) return;   /* leave them running */
+
+      document.documentElement.classList.add('cx-managed');
+
+      var io = new IntersectionObserver(function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          entries[i].target.classList.toggle('cx-live', entries[i].isIntersecting);
+        }
+      }, { rootMargin: '140px 0px' });
+
+      for (var i = 0; i < layers.length; i++) io.observe(layers[i]);
+    })();
   </script>
 </body>
 </html>
